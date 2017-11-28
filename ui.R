@@ -38,10 +38,30 @@ shinyUI(fluidPage(theme = "bootstrap.css",
                        textInput("folder_path", label="Path to the folder containing the RSML files", value="/Users/g.lobet/Desktop/RSML_RootNav_Nov_3153_v3/Alex_tch2_screen"),
                        actionButton('folder_path_button', label="Download RSML data", icon = icon("upload")),
                        tags$hr(),
-                       selectInput("genotypes", label="Column for genotypes", choices = c("Load datafile"), width="100%"),
-                       selectInput("treatment1", label="Column for treatment 1", choices = c("Load datafile"), width="100%"),
-                       selectInput("treatment2", label="Column for treatment 2", choices = c("Load datafile"), width="100%"),
-                       selectInput("timestamp", label="Column for time", choices = c("Load datafile"), width="100%"),
+                       h5("Factors to extract from names"),
+                       checkboxInput("gens", label="genotype", value = T,  width="50%"),
+                       checkboxInput("tr1", label="treatment1", value = T,  width="50%"),
+                       checkboxInput("tr2", label="treatment2", value = T,  width="50%"),
+                       checkboxInput("ti", label="date", value = T,  width="50%"),
+                       tags$hr(),
+
+                       conditionalPanel(
+                         condition = "input.gens == true",
+                         selectInput("genotypes", label="Column for genotypes", choices = c("Load datafile"), width="100%")
+                       ),
+                       conditionalPanel(
+                         condition = "input.tr1 == true",
+                         selectInput("treatment1", label="Column for treatment 1", choices = c("Load datafile"), width="100%")
+                       ),
+                       conditionalPanel(
+                         condition = "input.tr2 == true",
+                         selectInput("treatment2", label="Column for treatment 2", choices = c("Load datafile"), width="100%")
+                       ),
+                       conditionalPanel(
+                         condition = "input.ti == true",
+                         selectInput("timestamp", label="Column for time", choices = c("Load datafile"), width="100%")
+                       ),
+                       
                        actionButton('update_data', label="Update the data", icon = icon("refresh")),
                        tags$hr(),
                        h5("Data looking good?"),

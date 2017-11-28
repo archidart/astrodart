@@ -47,16 +47,16 @@ shinyServer(
     observeEvent(input$folder_path_button, {
       
       path <- input$folder_path
-      # path <- "/Users/g.lobet/Desktop/RSML_RootNav_Nov_3153_v3/Alex_tch2_screen"
+      # path <- "/Users/g.lobet/Desktop/RSML_RootNav_Nov_3153_v3/Dark_genelab_ecotypes"
       
-      archi <- rsmlToTable(path, fitter=T, rsml.connect = T)
+      archi <- rsmlToTable(path, fitter=T)
       architect <- architect(inputrsml = archi, fitter = T)
       
       # genotypes <- unlist(
         
       dats <- strsplit(as.character(architect$FileName), "_")
       factors <- NULL#data.frame(id=c(i:nrow(architect)))
-      for(i in c(1:length(dats[[1]]))){
+      for(i in c(1:(length(dats[[1]])-1))){
         temp <- unlist(lapply(dats, `[[`, i))[]
         factors <- cbind(factors, unlist(lapply(dats, `[[`, i))[]) 
       #  colnames(factors)[colnames(factors) == "temp"] <- paste0("col-",i)
@@ -72,35 +72,37 @@ shinyServer(
       }
       rs$factors_2 <- as.data.frame(factors)
       
-      rs$architect <- architect
-      rs$archi <- archi
+      rs$architect_origin <- architect
+      rs$archi_origin <- archi
+      rs$cols1 <- colnames(archi)[-1]
+      rs$cols2 <- colnames(architect)[-1]
       
     })
     
     observeEvent(input$update_data, {
       
-      archi <- rs$archi
-      architect <- rs$architect
+      archi <- rs$archi_origin
+      architect <- rs$architect_origin
       factors <- rs$factors
       factors_2 <- rs$factors_2
       
-      archi$genotype <- factors_2[[input$genotypes]]
-      archi$treatment1 <- factors_2[[input$treatment1]]
-      archi$treatment2 <- factors_2[[input$treatment2]]
-      archi$date <- factors_2[[input$timestamp]]
+      if(input$gens) archi$genotype <- factors_2[[input$genotypes]]
+      if(input$tr1) archi$treatment1 <- factors_2[[input$treatment1]]
+      if(input$tr2) archi$treatment2 <- factors_2[[input$treatment2]]
+      if(input$ti) archi$date <- factors_2[[input$timestamp]]
       
-      print(str(archi))
+      if(input$gens) architect$genotype <- factors[[input$genotypes]]
+      if(input$tr1) architect$treatment1 <- factors[[input$treatment1]]
+      if(input$tr2) architect$treatment2 <- factors[[input$treatment2]]
+      if(input$ti) architect$date <- factors[[input$timestamp]]
       
-      architect$genotype <- factors[[input$genotypes]]
-      architect$treatment1 <- factors[[input$treatment1]]
-      architect$treatment2 <- factors[[input$treatment2]]
-      architect$date <- factors[[input$timestamp]]
-      
-      archi <-  archi %>%
-        select(file, genotype, treatment1, treatment2, date, everything())
-      
+      cols <- match(rs$cols2,colnames(architect))
       architect <-  architect %>%
-        select(FileName, genotype, treatment1, treatment2, date, everything())
+        select(-cols, cols)
+      
+      cols <- match(rs$cols,colnames(archi))
+      archi <-  archi %>%
+        select(-cols, cols)
       
       rs$architect <- architect
       rs$archi <- archi
@@ -816,9 +818,9 @@ pl <- grid.arrange(pl1, pl2, ncol=1)'
   output$updated_data <- DT::renderDataTable({
     if(is.null(rs$architect)){return()}
     if(is.null(rs$architect$genotype)){
-      temp <- rs$architect %>% mutate_each(funs(round(.,2)), -c(FileName, Time)) 
+      temp <- rs$architect %>% mutate_each(funs(round(.,2)), which(sapply(., is.numeric))) 
     }else{
-      temp <- rs$architect %>% mutate_each(funs(round(.,2)), -c(FileName, genotype, treatment1, treatment2, date, Time)) 
+      temp <- rs$architect %>% mutate_each(funs(round(.,2)), which(sapply(., is.numeric))) 
     }
     DT::datatable(temp, options = list(scrollX = TRUE, pageLength = 5))
   })  
