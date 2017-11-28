@@ -1,0 +1,13 @@
+name,value
+TRL,Total root system length
+GRTR,Growth rate of the root system
+L1R,First-order root length
+GR1R,First-order root growth rate
+TN1R,Total number of first-order roots
+TNLR,Total number of lateral roots
+TLRL,Total lateral root length
+ML2LR,Mean length of lateral roots
+GR2L,Growth rate of lateral roots
+D2LR,Density of secondary roots
+Magnitude,Topological magnitude
+ExtPathLength, External path length
