@@ -47,7 +47,7 @@ shinyServer(
     observeEvent(input$folder_path_button, {
       
       path <- input$folder_path
-      path <- "/Users/g.lobet/Desktop/RSML_RootNav_Nov_3153_v3/Alex_tch2_screen"
+      # path <- "/Users/g.lobet/Desktop/RSML_RootNav_Nov_3153_v3/Alex_tch2_screen"
       
       archi <- rsmlToTable(path, fitter=T, rsml.connect = T)
       architect <- architect(inputrsml = archi, fitter = T)
