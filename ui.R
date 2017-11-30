@@ -29,7 +29,7 @@ library(shiny)
 shinyUI(fluidPage(theme = "bootstrap.css",
                   
   # Application title
-  navbarPage("astroDART",
+  navbarPage(title=span(tagList("<-|",icon("rocket"), " astroDART ",icon("leaf"),"|->")),
      tabPanel("Load data", id="tab1", icon = icon("upload"),
               fluidRow(
                 column(4,
@@ -39,10 +39,17 @@ shinyUI(fluidPage(theme = "bootstrap.css",
                        actionButton('folder_path_button', label="Download RSML data", icon = icon("upload")),
                        tags$hr(),
                        h5("Factors to extract from names"),
-                       checkboxInput("gens", label="genotype", value = T,  width="50%"),
-                       checkboxInput("tr1", label="treatment1", value = T,  width="50%"),
-                       checkboxInput("tr2", label="treatment2", value = T,  width="50%"),
-                       checkboxInput("ti", label="date", value = T,  width="50%"),
+                       fluidRow(
+                         column(4,
+                           checkboxInput("gens", label="genotype", value = T,  width="50%"),
+                           checkboxInput("tr1", label="treatment1", value = T,  width="50%"),
+                           checkboxInput("tr2", label="treatment2", value = T,  width="50%")
+                         ),
+                        column(4,
+                           checkboxInput("ti", label="date", value = T,  width="50%"),
+                           checkboxInput("rep", label="repetition", value = T,  width="50%")
+                        )
+                       ),
                        tags$hr(),
 
                        conditionalPanel(
@@ -61,6 +68,10 @@ shinyUI(fluidPage(theme = "bootstrap.css",
                          condition = "input.ti == true",
                          selectInput("timestamp", label="Column for time", choices = c("Load datafile"), width="100%")
                        ),
+                       conditionalPanel(
+                         condition = "input.rep == true",
+                         selectInput("repetition", label="Column for repetitions", choices = c("Load datafile"), width="100%")
+                       ),                       
                        
                        actionButton('update_data', label="Update the data", icon = icon("refresh")),
                        tags$hr(),
@@ -104,7 +115,7 @@ shinyUI(fluidPage(theme = "bootstrap.css",
                  tags$hr(),
                  plotOutput("metric_boxplot"),
                  tags$hr(),
-                 sliderInput("time_to_boxplot", "Time point to analyse", min = 1, max=12, step = 1, value = 10)
+                 sliderInput("time_to_boxplot", "Time point to analyse", min = 1, max=12, step = 1, value = 1)
           )          
         )
     ),

@@ -18,36 +18,37 @@ shinyServer(
   # Load the dataset
   # observeEvent(input$load_data, {
     
-    observe({
-    
-    # if(input$use_example){
-      load("www/architect.RData")
-      load("www/archi.RData")
-      load("www/genotypes.RData")
-      load("www/perh.RData")
-      load("www/perh_summary.RData")
-      load("www/archi_summary.RData")
-      load("www/perhomology.RData")
-      load("www/distances.RData")
-      load("www/histogram.RData")
-      rs$histogram <- histogram
-      # rs$architect <- architect
-      rs$genotypes <- genotypes
-      # rs$archi <- archi
-      rs$perh <- perh
-      rs$distances <- distance
-      rs$perh_summary <- perh_summary
-      rs$archi_summary <- archi_summary
-      rs$perhomology <- perhomology
-
+  #   observe({
+  #   
+  #   # if(input$use_example){
+  #     # load("www/architect.RData")
+  #     # load("www/archi.RData")
+  #     # load("www/genotypes.RData")
+  #     # load("www/perh.RData")
+  #     # load("www/perh_summary.RData")
+  #     # load("www/archi_summary.RData")
+  #     # load("www/perhomology.RData")
+  #     # load("www/distances.RData")
+  #     # load("www/histogram.RData")
+  #     # rs$histogram <- histogram
+  #     # # rs$architect <- architect
+  #     # rs$genotypes <- genotypes
+  #     # # rs$archi <- archi
+  #     # rs$perh <- perh
+  #     # rs$distances <- distance
+  #     # rs$perh_summary <- perh_summary
+  #     # rs$archi_summary <- archi_summary
+  #     # rs$perhomology <- perhomology
+  # 
       rs$names <- read_csv("www/names.csv")
-
-  })
+  # 
+  # })
     
+    ## Load the data -------
     observeEvent(input$folder_path_button, {
       
       path <- input$folder_path
-      # path <- "/Users/g.lobet/Desktop/RSML_RootNav_Nov_3153_v3/Dark_genelab_ecotypes"
+      # path <- "/Users/g.lobet/Desktop/RSML_RootNav_Nov_3153_v3/Alex_tch2_screen"
       
       archi <- rsmlToTable(path, fitter=T)
       architect <- architect(inputrsml = archi, fitter = T)
@@ -74,11 +75,14 @@ shinyServer(
       
       rs$architect_origin <- architect
       rs$archi_origin <- archi
-      rs$cols1 <- colnames(archi)[-1]
-      rs$cols2 <- colnames(architect)[-1]
+      #rs$cols1 <- colnames(archi)[-1]
+      #rs$cols2 <- colnames(architect)[-1]
+      
       
     })
     
+    
+    ## Update the genotype -----
     observeEvent(input$update_data, {
       
       archi <- rs$archi_origin
@@ -86,27 +90,156 @@ shinyServer(
       factors <- rs$factors
       factors_2 <- rs$factors_2
       
+      archi$genotype <- "-"
+      archi$treatment1 <- "-"
+      archi$treatment2 <- "-"
+      archi$date <- 1
+      archi$rep <- 1
+      
+      architect$genotype <- "-"
+      architect$treatment1 <- "-"
+      architect$treatment2 <- "-"
+      architect$date <- 1
+      architect$rep <- 1
+      
+      
       if(input$gens) archi$genotype <- factors_2[[input$genotypes]]
       if(input$tr1) archi$treatment1 <- factors_2[[input$treatment1]]
       if(input$tr2) archi$treatment2 <- factors_2[[input$treatment2]]
       if(input$ti) archi$date <- factors_2[[input$timestamp]]
+      if(input$rep) archi$rep <- as.numeric(gsub("[[:alpha:]]", "",factors_2[[input$repetition]]))
       
       if(input$gens) architect$genotype <- factors[[input$genotypes]]
       if(input$tr1) architect$treatment1 <- factors[[input$treatment1]]
       if(input$tr2) architect$treatment2 <- factors[[input$treatment2]]
       if(input$ti) architect$date <- factors[[input$timestamp]]
+      if(input$rep) architect$rep <- as.numeric(gsub("[[:alpha:]]", "",factors[[input$repetition]]))
+
       
-      cols <- match(rs$cols2,colnames(architect))
+      # cols <- match(rs$cols2,colnames(architect))
       architect <-  architect %>%
-        select(-cols, cols)
+        select(FileName, genotype, treatment1, treatment2, date, rep, everything())
       
-      cols <- match(rs$cols,colnames(archi))
+      # cols <- match(rs$cols,colnames(archi))
       archi <-  archi %>%
-        select(-cols, cols)
+        select(file, genotype, treatment1, treatment2, date, rep, everything())
       
       rs$architect <- architect
       rs$archi <- archi
+      rs$genotypes <- unique(archi$genotype)
+      
+      rs$roots <- ddply(archi, .(file, genotype, treatment1, treatment2, date, rep, plant, root), summarise, n=length(file))
+          
     })    
+    
+    
+    
+    ## Process the data ---- 
+    observeEvent(input$process_data, {
+      
+      archi <- rs$archi
+      architect <- rs$architect
+      
+      
+      withProgress(message = 'Computing the histograms', {
+  
+        # Compute the angle data to make the histgram
+        archi$rangle <- round(archi$orientation)
+        hist1 <- ddply(archi, .(time, genotype, treatment1, treatment2, date, rep, file, root, rangle), summarize, n=ceiling(sum(length/10)))
+        angle <- expandRows(hist1, "n")
+
+        # Compute the diameter data to make the histgram
+        archi$rdiam <- round(archi$diameter2)
+        hist1 <- ddply(archi, .(time, genotype, treatment1, treatment2, date, rep, file, root, rdiam), summarize, n=ceiling(sum(length/10)))
+        diameter <- expandRows(hist1, "n")
+        
+        # Compute the growth data to make the histgram
+        archi$rgrowth <- round(archi$growth)
+        hist1 <- ddply(archi, .(time, genotype, treatment1, treatment2, date, rep, file, root, rgrowth), plyr::summarize, n=ceiling(sum(length/10)))
+        growth <- expandRows(hist1, "n")
+        
+        # Compute the depth data to make the histgram
+        archi$rdepth <- round(archi$y2)
+        hist1 <- ddply(archi, .(time, genotype, treatment1, treatment2, date, rep, file, root, rdepth), plyr::summarize, n=ceiling(sum(length/10)))
+        depth <- expandRows(hist1, "n")
+        
+        # Compute the geodesic data to make the histgram
+        archi$rgeo <- round(archi$geodesic)
+        hist1 <- ddply(archi, .(time, genotype, treatment1, treatment2, date, rep, file, root, rgeo), summarize, n=ceiling(sum(length/10)))
+        geodesic <- expandRows(hist1, "n")
+        
+        # Compute the magnitude data to make the histgram
+        hist1 <- ddply(archi, .(time, genotype, treatment1, treatment2, date, rep, file, root, magnitude), summarize, n=ceiling(sum(length/10)))
+        magnitude <- expandRows(hist1, "n")
+        
+        # Compute the pathlength data to make the histgram
+        hist1 <- ddply(archi, .(time, genotype, treatment1, treatment2, date, rep, file, root, pathlength), summarize, n=ceiling(sum(length/10)))
+        pathlength <- expandRows(hist1, "n")
+        
+        # Compute the length data to make the histgram
+        length <- ddply(archi, .(file, plant, root, genotype, treatment1, treatment2, date, rep), summarise, value=sum(length))
+        
+        histogram = list("angle"=angle,
+                         "diameter"=diameter,
+                         "growth"=growth,
+                         "length"=length,
+                         "depth"=depth,
+                         "geodesic"=geodesic,
+                         "magnitude"=magnitude,
+                         "pathlength"=pathlength)
+      })
+      
+      withProgress(message = 'Computing the persistance homology', {
+        perhomology <- perhomology(archi)
+        
+        distance <- bottleneckdist(perhomology)
+
+        distance <- as.data.frame(distance)
+        distance$genotypes <- architect$genotype
+        distance$treatment1 <- architect$treatment1
+        distance$treatment2 <- architect$treatment2
+        distance$date <- architect$date
+        distance$temp <- architect$rep
+        
+        perh <- data.frame(matrix(unlist(perhomology), nrow=nrow(rs$roots), byrow=T))
+        perh <- cbind(perh,   rs$roots[,c(1:8)])
+        perh <- perh %>%
+          mutate(dimension = X1) %>%
+          mutate(birth = X2) %>%
+          mutate(death = X3) %>%
+          mutate(y = root)
+        perh$type <- "geodesic"
+  
+  
+        perh_summary <- ddply(perh, .(file, genotype, treatment1, treatment2, date, rep, type), summarise, sumdeath=sum(death),
+                              sumbirth = sum(birth),
+                              maxdeath = max(death),
+                              maxbirth = max(birth),
+                              life = mean(birth-death))
+      })
+      
+      withProgress(message = 'Computing the summary data', {
+        
+      archi_summary <- ddply(archi, .(file, genotype, treatment1, treatment2, date, rep), summarise,
+                             n_root=length(x1),
+                             depth = max(y1),
+                             tot_length = sum(length),
+                             max_magnitude = max(magnitude),
+                             max_path_length = max(pathlength),
+                             mean_magnitude = mean(magnitude),
+                             mean_path_length = mean(pathlength))
+
+      })
+      
+      
+      rs$histogram <- histogram
+      rs$perh <- perh
+      rs$distances <- distance
+      rs$perh_summary <- perh_summary
+      rs$archi_summary <- archi_summary
+      rs$perhomology <- perhomology
+    })
+    
   
     
     observeEvent(input$load_code, {
@@ -136,10 +269,9 @@ architect$genotype <- genotypes
     })    
 
     
-  ############################################################
-  ### UI commands
-  ############################################################
-  
+
+  # UI COMMANDS  ################################
+
     observe({
       if(is.null(rs$factors)){return()}
       vars <- colnames(rs$factors)
@@ -175,6 +307,16 @@ architect$genotype <- genotypes
       for(ct in vars) ct_options[[ct]] <- ct
       if(length(sel) == 0 | sel == "") sel = ct_options[1]
       updateSelectInput(session, "timestamp", choices = ct_options, selected=sel) 
+    })
+    
+    observe({
+      if(is.null(rs$factors)){return()}
+      vars <- colnames(rs$factors)
+      ct_options <- list()
+      sel <- input$repetition
+      for(ct in vars) ct_options[[ct]] <- ct
+      if(length(sel) == 0 | sel == "") sel = ct_options[1]
+      updateSelectInput(session, "repetition", choices = ct_options, selected=sel) 
     })    
     
     
@@ -202,7 +344,7 @@ architect$genotype <- genotypes
   
   observe({
     if(is.null(rs$archi_summary)){return()}
-    vars <- colnames(rs$archi_summary)[-c(1:3)]
+    vars <- colnames(rs$archi_summary)[-c(1:6)]
     ct_options <- list()
     sel <- input$to_plot_2_bis
     for(ct in vars) ct_options[[ct]] <- ct
@@ -276,18 +418,19 @@ architect$genotype <- genotypes
     updateSelectInput(session, "variable_to_pca", choices = ct_options, selected=sel) 
   }) 
   
-  ############################################################
-  ### PLOTS
-  ############################################################
+
   
-  # Time plot
-  testPlot <- 
+  # PLOTS  ################################
   
+  ## Time plot  ################################
+
   output$time_plot <- renderPlot({
     if(is.null(rs$architect)){return()}
     val <- rs$names$name[rs$names$value == input$to_plot]
     temp <- rs$architect[rs$architect$genotype %in% input$genotypes_to_plot,]
     temp$value <- temp[[val]]
+    
+    print(unique(temp$date))
     
     pl <- ggplot() +  
       xlab("Time [days]") + 
@@ -299,16 +442,17 @@ architect$genotype <- genotypes
     
     if(input$plot_mean){
       pl <- pl + 
-        stat_smooth(data = temp, aes(Time, value, colour=genotype))
+        stat_smooth(data = temp, aes(date, value, colour=genotype))
     } else{
       pl <- pl + 
-        geom_line(data = temp, aes(Time, value, colour=genotype, group=FileName))
+        geom_line(data = temp, aes(date, value, colour=genotype, group=FileName))
     }
     
     pl
     
   }) 
   
+  ## Metric boxplot  ################################
   
   output$metric_boxplot <- renderPlot({
     
@@ -374,12 +518,13 @@ ggplot(data = architect) +
   
   
   
-  # archi plot
+  ## Archi plot  ################################
+  
   output$archi_plot <- renderPlot({
     if(is.null(rs$archi)){return()}
     
     temp <- rs$archi[rs$archi$genotype %in% input$genotypes_to_plot_1,]
-    temp <- temp[as.numeric(temp$rep) <= input$reps_to_plot,]
+    # temp <- temp[as.numeric(temp$rep) <= input$reps_to_plot,]
     temp$value <- temp[[input$to_plot_2]]
     
     
@@ -401,7 +546,7 @@ ggplot(data = architect) +
         scale_colour_gradientn(colours=cscale3,
                                limits = input$psirange)+
         #scale_colour_gradientn(colours = terrain.colors(10)) + 
-        facet_wrap(~genotype, ncol=input$ncol) +
+        facet_grid(treatment1~genotype) +
         theme(legend.position="top")
     }
     
@@ -433,6 +578,7 @@ ggplot(archi) +
   })
   
   
+  ## Distri plot  ################################
   
   output$distri_plot <- renderPlot({
     if(is.null(rs$archi)){return()}
@@ -489,6 +635,8 @@ pl <- ggplot(histogram, aes(x=value, colour=genotype)) +
   })  
   
   
+  ## Archi boxplot  ################################
+  
   output$archi_boxplot <- renderPlot({
     if(is.null(rs$perh_summary)){return()}
     
@@ -543,15 +691,18 @@ pl <- ggplot(archi_summary, aes(genotype, ',input$to_plot_2_bis,', fill=genotype
   
 
 
-  # archi plot
+  ## Barcode plot  ################################
+  
   output$barcode_plot <- renderPlot({
     if(is.null(rs$perh)){return()}
     
     temp <- rs$perh[rs$perh$genotype %in% input$genotypes_to_plot_2,]
     temp <- temp[temp$type == "geodesic",]
-    temp <- temp[as.numeric(temp$rep) <= input$reps_to_plot_2,]
+    #temp <- temp[as.numeric(temp$rep) <= input$reps_to_plot_2,]
 
-    alph <- 1/input$reps_to_plot_2
+    print(str(rs$perh))
+    
+    alph <- 0.5#1/input$reps_to_plot_2
     
     pl <- ggplot(temp) + 
       geom_segment(aes(x = birth, y=y, xend=death, yend=y, alpha=alph, colour=rep)) + 
@@ -601,6 +752,7 @@ library(tidyverse)
   })  
   
   
+  ## Barcode boxplot  ################################
   
   output$barcode_boxplot <- renderPlot({
     if(is.null(rs$perh_summary)){return()}
@@ -652,6 +804,7 @@ pl <- ggplot(temp, aes(genotype, value, fill=genotype)) +
   
   
   
+  ## Barcode PCA  ################################
   
   output$barcode_PCA <- renderPlot({
     if(is.null(rs$distances)){return()}
@@ -699,12 +852,9 @@ ggplot(data) +
       easyClose = TRUE      
     ))
   }) 
+
   
-  
-  
-  # PCA plot
-  
-  
+  ## PCA plot  ################################
   output$pca_plot <- renderPlot({
     if(is.null(rs$architect)){return()}
     
@@ -796,9 +946,10 @@ pl <- grid.arrange(pl1, pl2, ncol=1)'
     ))
   }) 
   
-  ############################################################
-  ### TABLE
-  ############################################################  
+  
+  
+  
+  # TABLES ################################
 
   output$distribution_data <- DT::renderDataTable({
     if(is.null(rs$architect)){return()}
@@ -807,6 +958,9 @@ pl <- grid.arrange(pl1, pl2, ncol=1)'
     DT::datatable(temp, options = list(scrollX = TRUE, pageLength = 10))
   })
 
+  
+  ## Factor table ################################
+  
   output$factor_data <- DT::renderDataTable({
     if(is.null(rs$factors)){return()}
     temp <- rs$factors
@@ -814,7 +968,7 @@ pl <- grid.arrange(pl1, pl2, ncol=1)'
     DT::datatable(temp, options = list(scrollX = TRUE, pageLength = 5))
   })  
   
-  
+  ## Updated data ################################
   output$updated_data <- DT::renderDataTable({
     if(is.null(rs$architect)){return()}
     if(is.null(rs$architect$genotype)){
