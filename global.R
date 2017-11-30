@@ -22,15 +22,25 @@
 # 
 # NOTE: The GPL.v3 license requires that all derivative work is distributed under the same license. That means that if you use this source code in any other program, you can only distribute that program with the full source code included and licensed under a GPL license.
 
-library(tidyverse)
-library(DT)
-library(shinyBS)
-library(data.table)
-library(gridExtra)
-library(ggrepel)
-library(vegan)
+
+PkgTest <- function(vec.pkg){
+  for(str.pkg in vec.pkg){
+    if (!require(str.pkg,character.only = TRUE)){
+      install.packages(str.pkg,dep=TRUE)
+      if(!require(str.pkg,character.only = TRUE)) stop("Package not found")
+    }
+  }
+  return(TRUE)
+}
+
+packages <- c("tidyverse", "DT", "shinyBS", "data.table", "gridExtra", 
+              "ggrepel", "vegan", "devtools", "splitstackshape")
+
+PkgTest(packages)
+
+devtools::install_github("archidart/archidart")
 library(archiDART)
-# library(plotly)
+
 
 cscale <- c("#ffffcc", "#a1dab4","#41b6c4", "#2c7fb8", "#253494")
 cscale1 <- c("#b30000","#e34a33","#fc8d59","#fdcc8a")
