@@ -18,37 +18,15 @@ shinyServer(
   # Load the dataset
   # observeEvent(input$load_data, {
     
-  #   observe({
-  #   
-  #   # if(input$use_example){
-  #     # load("www/architect.RData")
-  #     # load("www/archi.RData")
-  #     # load("www/genotypes.RData")
-  #     # load("www/perh.RData")
-  #     # load("www/perh_summary.RData")
-  #     # load("www/archi_summary.RData")
-  #     # load("www/perhomology.RData")
-  #     # load("www/distances.RData")
-  #     # load("www/histogram.RData")
-  #     # rs$histogram <- histogram
-  #     # # rs$architect <- architect
-  #     # rs$genotypes <- genotypes
-  #     # # rs$archi <- archi
-  #     # rs$perh <- perh
-  #     # rs$distances <- distance
-  #     # rs$perh_summary <- perh_summary
-  #     # rs$archi_summary <- archi_summary
-  #     # rs$perhomology <- perhomology
-  # 
+    observe({
       rs$names <- read_csv("www/names.csv")
-  # 
-  # })
+    })
     
     ## Load the data -------
     observeEvent(input$folder_path_button, {
       
       path <- input$folder_path
-      # path <- "/Users/g.lobet/Desktop/RSML_RootNav_Nov_3153_v3/Alex_tch2_screen"
+      # path <- "/Users/g.lobet/Desktop/test"
       
       archi <- rsmlToTable(path, fitter=T)
       architect <- architect(inputrsml = archi, fitter = T)
@@ -127,6 +105,38 @@ shinyServer(
       rs$architect <- architect
       rs$archi <- archi
       rs$genotypes <- unique(archi$genotype)
+      
+      archi <- archi %>%
+        mutate(plant_id = paste0(file,"-",plant))
+      
+      
+      
+      convexhull <- NULL
+      for(id in unique(archi$plant_id)){
+        temp <- archi %>% filter(plant_id == id)
+        temp <- temp %>% 
+          mutate(x1 = x1-(min(x1) + (max(x1)-min(x1))/2)) %>%
+          mutate(y1 = y1-(min(y1) + (max(y1)-min(y1))/2))
+        hpts <- chull(temp$x1, temp$y1)
+        hpts <- c(hpts, hpts[1])
+        temp <- temp[hpts,]
+        temp2 <- temp[,c("x1","y1")] %>%
+          mutate(x_end = x1) %>%
+          mutate(y_end = y1) %>%
+          select(x_end, y_end)
+        temp2 <- rbind(temp2[-1,], temp2[1,])
+        temp <- cbind(temp,temp2) %>%
+          select(x1,y1,x_end,y_end) %>%
+          mutate(plant_id = id)
+        convexhull <- rbind(convexhull, temp)
+      }
+      
+      convexhull <- merge(convexhull, archi[,c("plant_id", "genotype","treatment1","treatment2","rep","date")], by="plant_id")
+      
+      ggplot(convexhull) +
+        geom_segment(aes(x1,y1,xend=x_end,yend=y_end, group=plant_id)) +
+        facet_wrap(~genotype)
+        theme_classic()
       
       rs$roots <- ddply(archi, .(file, genotype, treatment1, treatment2, date, rep, plant, root), summarise, n=length(file))
           
@@ -404,7 +414,30 @@ architect$genotype <- genotypes
     for(ct in vars) ct_options[[ct]] <- ct
     # cts  <- c("tot_root_length","n_laterals","tot_lat_length")
     updateSelectInput(session, "genotypes_to_plot_3", choices = ct_options, selected=sel) 
-  })     
+  })    
+  
+  observe({
+    if(is.null(rs$genotypes)){return()}
+    vars <- unique(rs$genotypes)
+    ct_options <- list()
+    sel <- input$genotypes_to_plot_6
+    if(length(sel) == 0) sel = vars
+    for(ct in vars) ct_options[[ct]] <- ct
+    # cts  <- c("tot_root_length","n_laterals","tot_lat_length")
+    updateSelectInput(session, "genotypes_to_plot_6", choices = ct_options, selected=sel) 
+  }) 
+  
+  observe({
+    if(is.null(rs$archi)){return()}
+    vars <- unique(rs$archi$order)
+    ct_options <- list()
+    sel <- input$orders_to_plot_6
+    if(length(sel) == 0) sel = vars
+    for(ct in vars) ct_options[[ct]] <- ct
+    # cts  <- c("tot_root_length","n_laterals","tot_lat_length")
+    updateSelectInput(session, "orders_to_plot_6", choices = ct_options, selected=sel) 
+  }) 
+  
   
   observe({
     if(is.null(rs$architect)){return()}
@@ -421,7 +454,31 @@ architect$genotype <- genotypes
 
   
   # PLOTS  ################################
+
+  ## Angle plot  ################################
   
+  output$angle_plot <- renderPlot({
+    if(is.null(rs$archi)){return()}
+    
+    temp <- rs$archi[rs$archi$genotype %in% input$genotypes_to_plot_6,]
+    temp <- temp[temp$order %in% input$orders_to_plot_6,]
+
+    temp1 <- ddply(temp, .(plant, root), summarise, median=median(orientation), mean=mean(orientation))
+    temp2 <- merge(temp, temp1, by = c("plant", "root"))
+    
+    print(temp2)
+    
+    
+    ggplot(temp2, aes(orientation, fill=factor(order))) + 
+      stat_density() +  
+      # geom_vline(aes(xintercept = median), colour="green") + 
+      # geom_vline(aes(xintercept = mean), colour="blue") + 
+      coord_polar(start = pi, direction=1) + 
+      scale_x_continuous(breaks=seq(0, 360, by=30), expand=c(0,0), lim=c(0, 360)) +
+      facet_wrap(~genotype, ncol=input$ncol2) + 
+      theme_bw()
+  })  
+    
   ## Time plot  ################################
 
   output$time_plot <- renderPlot({

@@ -161,6 +161,24 @@ shinyUI(fluidPage(theme = "bootstrap.css",
          )
        )
     ),
+    tabPanel("archiAngle", id="tab6",icon = icon("bolt"),
+             fluidRow(
+               column(3, 
+                      helpText("This panel aims at quantifyiong the trajectory of the different roots of the different genotypes"),
+                      selectInput("genotypes_to_plot_6", label="Genotypes to plot", choices = c("Load datafile"), 
+                                  selected = NULL, multiple = TRUE, width="100%"),
+                      selectInput("orders_to_plot_6", label="Root orders to plot", choices = c("Load datafile"), 
+                                  selected = NULL, multiple = TRUE, width="100%"),
+                      sliderInput("ncol2", "Number of columns", min = 1, max=10, step = 1, value = 3),
+                      tags$hr(),
+                      img(src='logo.jpg', align = "left", width="100%")
+               ),
+               column(8,
+                      h4("Plot the angle distributions"),
+                      plotOutput("angle_plot", height = 1000)
+               )
+             )
+    ),    
     tabPanel("archiHomology", id="tab4",icon = icon("barcode"),
              fluidRow(
                column(3, 
