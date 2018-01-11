@@ -72,7 +72,7 @@ shinyUI(fluidPage(theme = "bootstrap.css",
                          condition = "input.rep == true",
                          selectInput("repetition", label="Column for repetitions", choices = c("Load datafile"), width="100%")
                        ),                       
-                       
+                       checkboxInput("align", label="align my plants", value = T,  width="100%"),
                        actionButton('update_data', label="Update the data", icon = icon("refresh")),
                        tags$hr(),
                        h5("Data looking good?"),
@@ -171,6 +171,8 @@ shinyUI(fluidPage(theme = "bootstrap.css",
                                   selected = NULL, multiple = TRUE, width="100%"),
                       sliderInput("ncol2", "Number of columns", min = 1, max=10, step = 1, value = 3),
                       checkboxInput('plot_angle_abs', "Plot counts instead of densities", value = F, width = NULL),
+                      checkboxInput('plot_orders', "Plot orders in facets", value = F, width = NULL),
+                      checkboxInput('root_level', "Plot at the root level", value = F, width = NULL),
                       tags$hr(),
                       img(src='logo.jpg', align = "left", width="100%")
                ),

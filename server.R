@@ -117,17 +117,20 @@ shinyServer(
       
       convexhull <- NULL
       for(id in unique(archi$plant_id)){
-        archi[archi$plant_id == id,] %<>%
-          mutate(x11 = x1) %>%
-          mutate(x21 = x2) %>%
-          mutate(y11 = y1) %>%
-          mutate(y21 = y2) %>%
-          mutate(x1 = x1 - min(x11, x21)) %>%
-          mutate(y1 = y1 - min(y11, y21)) %>%
-          mutate(x2 = x2 - min(x11, x21)) %>%
-          mutate(y2 = y2 - min(y11, y21))%>%
-          select(-c(x11, x21, y11, y21))
+        if(input$align){
+          archi[archi$plant_id == id,] %<>%
+            mutate(x11 = x1) %>%
+            mutate(x21 = x2) %>%
+            mutate(y11 = y1) %>%
+            mutate(y21 = y2) %>%
+            mutate(x1 = x1 - min(x11, x21)) %>%
+            mutate(y1 = y1 - min(y11, y21)) %>%
+            mutate(x2 = x2 - min(x11, x21)) %>%
+            mutate(y2 = y2 - min(y11, y21))%>%
+            select(-c(x11, x21, y11, y21))
+        }
         temp <- archi %>% filter(plant_id == id)
+        
         # temp <- temp %>% 
         #   mutate(x1 = x1-(min(x1) + (max(x1)-min(x1))/2)) %>%
         #   mutate(y1 = y1-(min(y1) + (max(y1)-min(y1))/2))
@@ -145,11 +148,40 @@ shinyServer(
         convexhull <- rbind(convexhull, temp)
       }
       
+      
+      roots <- NULL
+      for(r in unique(archi$root_id)){
+        temp <- archi %>% 
+          filter(root_id == r) %>%
+          filter(grepl("true", bran) | grepl("true", apic))
+        vector_length <- sqrt(((temp$x1[2] - temp$x1[1]) + (temp$y1[2] - temp$y1[1]))^2)
+        vector_angle <- atan2(temp$x1[2] - temp$x1[1], temp$y1[2] - temp$y1[1]) * 180 / pi 
+        temp <- temp[2,]
+        roots <- rbind(roots, data.frame(file = temp$file,
+                                         genotype = temp$genotype,
+                                         treatment1 = temp$treatment1,
+                                         treatment2 = temp$treatment2,
+                                         rep = temp$rep,
+                                         date = temp$date,
+                                         order = temp$order,
+                                         plant = temp$plant,
+                                         plant_id = temp$plant_id,
+                                         root_id = temp$root_id,
+                                         parentroot = temp$parentroot,
+                                         length = temp$blength,
+                                         vector_length = vector_length,
+                                         orientation = vector_angle
+                                         ))
+      }
+      roots$vector_angle[roots$vector_angle < 0] <- 360 + roots$vector_angle[roots$vector_angle < 0]
+      
+      rs$roots <- roots
+      
       rs$archi <- archi
       
       rs$convexhull <- merge(convexhull, archi[,c("plant_id", "genotype","treatment1","treatment2","rep","date")], by="plant_id")
       
-      rs$roots <- ddply(archi, .(file, genotype, treatment1, treatment2, date, rep, plant, root), summarise, n=length(file))
+      rs$roots1 <- ddply(archi, .(file, genotype, treatment1, treatment2, date, rep, plant, root), summarise, n=length(file))
           
     })    
     
@@ -225,8 +257,8 @@ shinyServer(
         distance$date <- architect$date
         distance$temp <- architect$rep
         
-        perh <- data.frame(matrix(unlist(perhomology), nrow=nrow(rs$roots), byrow=T))
-        perh <- cbind(perh,   rs$roots[,c(1:8)])
+        perh <- data.frame(matrix(unlist(perhomology), nrow=nrow(rs$roots1), byrow=T))
+        perh <- cbind(perh,   rs$roots1[,c(1:8)])
         perh <- perh %>%
           mutate(dimension = X1) %>%
           mutate(birth = X2) %>%
@@ -474,22 +506,31 @@ architect$genotype <- genotypes
   output$angle_plot <- renderPlot({
     if(is.null(rs$archi)){return()}
     
-    temp <- rs$archi[rs$archi$genotype %in% input$genotypes_to_plot_6,]
-    temp <- temp[temp$order %in% input$orders_to_plot_6,]
-
-    temp1 <- ddply(temp, .(plant, root), summarise, median=median(orientation), mean=mean(orientation))
-    temp2 <- merge(temp, temp1, by = c("plant", "root"))
+    if(input$root_level){
+      temp <- rs$roots[rs$roots$genotype %in% input$genotypes_to_plot_6,]
+      temp <- temp[temp$order %in% input$orders_to_plot_6,]      
+    }else{
+      temp <- rs$archi[rs$archi$genotype %in% input$genotypes_to_plot_6,]
+      temp <- temp[temp$order %in% input$orders_to_plot_6,]
+    }
     
-    print(temp2)
-    
-    
-    pl <- ggplot(temp2, aes(orientation, fill=factor(order))) + 
-      # geom_vline(aes(xintercept = median), colour="green") + 
-      # geom_vline(aes(xintercept = mean), colour="blue") + 
-      coord_polar(start = pi, direction=1) + 
-      scale_x_continuous(breaks=seq(0, 360, by=30), expand=c(0,0), lim=c(0, 360)) +
-      facet_wrap(~genotype, ncol=input$ncol2) + 
-      theme_bw()
+    if(input$plot_orders){
+      pl <- ggplot(temp, aes(orientation, fill=factor(genotype))) + 
+        # geom_vline(aes(xintercept = median), colour="green") + 
+        # geom_vline(aes(xintercept = mean), colour="blue") + 
+        coord_polar(start = pi, direction=1) + 
+        scale_x_continuous(breaks=seq(0, 360, by=30), expand=c(0,0), lim=c(0, 360)) +
+        facet_wrap(~order, ncol=input$ncol2) + 
+        theme_bw()
+    }else{
+      pl <- ggplot(temp, aes(orientation, fill=factor(order))) + 
+        # geom_vline(aes(xintercept = median), colour="green") + 
+        # geom_vline(aes(xintercept = mean), colour="blue") + 
+        coord_polar(start = pi, direction=1) + 
+        scale_x_continuous(breaks=seq(0, 360, by=30), expand=c(0,0), lim=c(0, 360)) +
+        facet_wrap(~genotype, ncol=input$ncol2) + 
+        theme_bw()
+    }
     
     if(input$plot_angle_abs) pl <- pl + geom_histogram(alpha=0.5)
     else pl <- pl + stat_density(alpha=0.5) 
