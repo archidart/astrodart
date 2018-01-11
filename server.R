@@ -469,14 +469,18 @@ architect$genotype <- genotypes
     print(temp2)
     
     
-    ggplot(temp2, aes(orientation, fill=factor(order))) + 
-      stat_density() +  
+    pl <- ggplot(temp2, aes(orientation, fill=factor(order))) + 
       # geom_vline(aes(xintercept = median), colour="green") + 
       # geom_vline(aes(xintercept = mean), colour="blue") + 
       coord_polar(start = pi, direction=1) + 
       scale_x_continuous(breaks=seq(0, 360, by=30), expand=c(0,0), lim=c(0, 360)) +
       facet_wrap(~genotype, ncol=input$ncol2) + 
       theme_bw()
+    
+    if(input$plot_angle_abs) pl <- pl + geom_histogram(alpha=0.5)
+    else pl <- pl + stat_density(alpha=0.5) 
+    
+    pl
   })  
     
   ## Time plot  ################################

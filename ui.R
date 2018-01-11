@@ -170,6 +170,7 @@ shinyUI(fluidPage(theme = "bootstrap.css",
                       selectInput("orders_to_plot_6", label="Root orders to plot", choices = c("Load datafile"), 
                                   selected = NULL, multiple = TRUE, width="100%"),
                       sliderInput("ncol2", "Number of columns", min = 1, max=10, step = 1, value = 3),
+                      checkboxInput('plot_angle_abs', "Plot counts instead of densities", value = F, width = NULL),
                       tags$hr(),
                       img(src='logo.jpg', align = "left", width="100%")
                ),
