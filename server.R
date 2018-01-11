@@ -29,6 +29,11 @@ shinyServer(
       # path <- "/Users/g.lobet/Desktop/test"
       
       archi <- rsmlToTable(path, fitter=T)
+      
+      # Correct the "plant" values
+      archi$plant[archi$order == 1] <- paste0(archi$plant[archi$order == 1], "_", archi$root[archi$order == 1])
+      archi$plant[archi$order == 2] <- paste0(archi$plant[archi$order == 2], "_", archi$parentroot[archi$order == 2])
+      
       architect <- architect(inputrsml = archi, fitter = T)
       
       # genotypes <- unlist(
@@ -107,16 +112,25 @@ shinyServer(
       rs$genotypes <- unique(archi$genotype)
       
       archi <- archi %>%
-        mutate(plant_id = paste0(file,"-",plant))
-      
-      
+        mutate(plant_id = paste0(file,"-",plant)) %>%
+        mutate(root_id = paste0(plant_id,"-",root))
       
       convexhull <- NULL
       for(id in unique(archi$plant_id)){
+        archi[archi$plant_id == id,] %<>%
+          mutate(x11 = x1) %>%
+          mutate(x21 = x2) %>%
+          mutate(y11 = y1) %>%
+          mutate(y21 = y2) %>%
+          mutate(x1 = x1 - min(x11, x21)) %>%
+          mutate(y1 = y1 - min(y11, y21)) %>%
+          mutate(x2 = x2 - min(x11, x21)) %>%
+          mutate(y2 = y2 - min(y11, y21))%>%
+          select(-c(x11, x21, y11, y21))
         temp <- archi %>% filter(plant_id == id)
-        temp <- temp %>% 
-          mutate(x1 = x1-(min(x1) + (max(x1)-min(x1))/2)) %>%
-          mutate(y1 = y1-(min(y1) + (max(y1)-min(y1))/2))
+        # temp <- temp %>% 
+        #   mutate(x1 = x1-(min(x1) + (max(x1)-min(x1))/2)) %>%
+        #   mutate(y1 = y1-(min(y1) + (max(y1)-min(y1))/2))
         hpts <- chull(temp$x1, temp$y1)
         hpts <- c(hpts, hpts[1])
         temp <- temp[hpts,]
@@ -131,12 +145,9 @@ shinyServer(
         convexhull <- rbind(convexhull, temp)
       }
       
-      convexhull <- merge(convexhull, archi[,c("plant_id", "genotype","treatment1","treatment2","rep","date")], by="plant_id")
+      rs$archi <- archi
       
-      ggplot(convexhull) +
-        geom_segment(aes(x1,y1,xend=x_end,yend=y_end, group=plant_id)) +
-        facet_wrap(~genotype)
-        theme_classic()
+      rs$convexhull <- merge(convexhull, archi[,c("plant_id", "genotype","treatment1","treatment2","rep","date")], by="plant_id")
       
       rs$roots <- ddply(archi, .(file, genotype, treatment1, treatment2, date, rep, plant, root), summarise, n=length(file))
           
@@ -200,10 +211,13 @@ shinyServer(
       })
       
       withProgress(message = 'Computing the persistance homology', {
-        perhomology <- perhomology(archi)
         
+        perhomology <- perhomology(archi)
         distance <- bottleneckdist(perhomology)
 
+        print(str(distance))
+        print(str(architect))
+        
         distance <- as.data.frame(distance)
         distance$genotypes <- architect$genotype
         distance$treatment1 <- architect$treatment1
@@ -596,7 +610,7 @@ ggplot(data = architect) +
           theme_bw() + 
           scale_colour_gradientn(colours=cscale3,
                                limits = input$psirange) + 
-          facet_wrap(~file, ncol=input$ncol)  +
+          facet_wrap(~plant_id, ncol=input$ncol)  +
         theme(legend.position="bottom")
          
     }else{
