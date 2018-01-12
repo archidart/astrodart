@@ -30,20 +30,26 @@ shinyUI(fluidPage(theme = "bootstrap.css",
                   
   # Application title
   navbarPage(title=span(tagList("<-|",icon("rocket"), " astroDART ",icon("leaf"),"|->")),
+             
+             
+    ## Load data ----              
+    
      tabPanel("Load data", id="tab1", icon = icon("upload"),
               fluidRow(
                 column(4,
                        h4("astroDART"),
                        helpText("This app blablabla"),
-                       textInput("folder_path", label="Path to the folder containing the RSML files", value="/Users/g.lobet/Desktop/RSML_RootNav_Nov_3153_v3/Alex_tch2_screen"),
+                       textInput("folder_path", label="Path to the folder containing the RSML files", value="/Users/g.lobet/Desktop/RSML_RootNav_Nov_3153_v3/Natasha_1"),
                        actionButton('folder_path_button', label="Download RSML data", icon = icon("upload")),
                        tags$hr(),
                        h5("Factors to extract from names"),
+                       selectInput("separator", label="Separator for factors in file names", choices = c("_", "-", "/", " "), 
+                                   selected = 1, multiple = F, width="50%"),
                        fluidRow(
                          column(4,
                            checkboxInput("gens", label="genotype", value = T,  width="50%"),
                            checkboxInput("tr1", label="treatment1", value = T,  width="50%"),
-                           checkboxInput("tr2", label="treatment2", value = T,  width="50%")
+                           checkboxInput("tr2", label="treatment2", value = F,  width="50%")
                          ),
                         column(4,
                            checkboxInput("ti", label="date", value = T,  width="50%"),
@@ -66,7 +72,7 @@ shinyUI(fluidPage(theme = "bootstrap.css",
                        ),
                        conditionalPanel(
                          condition = "input.ti == true",
-                         selectInput("timestamp", label="Column for time", choices = c("Load datafile"), width="100%")
+                         selectInput("timestamp", label="Column for date", choices = c("Load datafile"), width="100%")
                        ),
                        conditionalPanel(
                          condition = "input.rep == true",
@@ -90,6 +96,10 @@ shinyUI(fluidPage(theme = "bootstrap.css",
                 )
               )
      ),
+     
+     ## archiTect ---- 
+     
+     
     tabPanel("archiTect", id="tab2", icon = icon('sliders'),
         fluidRow(
           column(3, 
@@ -119,6 +129,10 @@ shinyUI(fluidPage(theme = "bootstrap.css",
           )          
         )
     ),
+    
+    ## archiDraw ---- 
+    
+    
     tabPanel("archiDraw", id="tab3",icon = icon("pencil"),
        fluidRow(
          column(3, 
@@ -135,7 +149,10 @@ shinyUI(fluidPage(theme = "bootstrap.css",
          column(5,
                 fluidRow(
                   column(6, h4("Plot the architecture")),
-                  column(6, checkboxInput('show_distri', "Hey, show me the histograms instead!", value = F, width = NULL))
+                  column(6, 
+                         checkboxInput('show_distri', "Hey, show me the histograms instead!", value = F, width = NULL),
+                         checkboxInput('show_chul', "Hey, show me the convexhulls!", value = F, width = NULL)
+                         )
                 ),
                 conditionalPanel(
                   condition = "input.show_distri == false",
@@ -161,6 +178,9 @@ shinyUI(fluidPage(theme = "bootstrap.css",
          )
        )
     ),
+    
+    ## archiAngle ---- 
+    
     tabPanel("archiAngle", id="tab6",icon = icon("bolt"),
              fluidRow(
                column(3, 
@@ -182,6 +202,9 @@ shinyUI(fluidPage(theme = "bootstrap.css",
                )
              )
     ),    
+    
+    ## archiHomology ---- 
+    
     tabPanel("archiHomology", id="tab4",icon = icon("barcode"),
              fluidRow(
                column(3, 
@@ -214,6 +237,9 @@ shinyUI(fluidPage(theme = "bootstrap.css",
                )
              )
     ),    
+    
+    ## archiPCA ---- 
+    
     tabPanel("archiPCA", id="tab3",icon = icon("bullseye"),
       fluidRow(
       column(3, 
@@ -234,6 +260,56 @@ shinyUI(fluidPage(theme = "bootstrap.css",
       )
     )      
     ), 
+    
+    ## Download processed data ---- 
+    
+    tabPanel("Download processed data",
+             tabsetPanel(
+               
+               tabPanel("Plant data [architect]",
+                        helpText("This table contains data at the plant level, obtained with the function architect"),
+                        downloadButton('download_architect', 'Download full table'),
+                        tags$hr(),
+                        DT::dataTableOutput('architect_results'),
+                        value=2
+               ),
+               
+               tabPanel("Root data",
+                        helpText("This table contains data at the single root level. These data are aggregated from the segment data"),
+                        downloadButton('download_roots', 'Download full table'),
+                        tags$hr(),
+                        DT::dataTableOutput('roots_results'),
+                        value=2
+               ),
+               
+               tabPanel("Segment data [archi]",
+                        helpText("This table contains data at the root segment level, obtained with the rsmlToTable function"),
+                        downloadButton('download_archi', 'Download full table'),
+                        tags$hr(),
+                        DT::dataTableOutput('archi_results'),
+                        value=2
+               ),
+               
+               tabPanel("Homology data",
+                        helpText("This table contains the persistent homology data"),
+                        downloadButton('download_perh', 'Download full table'),
+                        tags$hr(),
+                        DT::dataTableOutput('perh_results'),
+                        value=2
+               ),
+               
+               tabPanel("Convexhull data",
+                        helpText("This table contains the convexhull data"),
+                        downloadButton('download_chull', 'Download full table'),
+                        tags$hr(),
+                        DT::dataTableOutput('chull_results'),
+                        value=2
+               )
+               
+             )
+    ),
+    
+    
     tabPanel("About", id="tab4", icon=icon("plus-circle"),
       fluidRow(
         column(3),

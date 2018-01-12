@@ -24,48 +24,58 @@ shinyServer(
     
     ## Load the data -------
     observeEvent(input$folder_path_button, {
-      
-      path <- input$folder_path
-      # path <- "/Users/g.lobet/Desktop/test"
-      
-      archi <- rsmlToTable(path, fitter=T)
-      
-      # Correct the "plant" values
-      archi$plant[archi$order == 1] <- paste0(archi$plant[archi$order == 1], "_", archi$root[archi$order == 1])
-      archi$plant[archi$order == 2] <- paste0(archi$plant[archi$order == 2], "_", archi$parentroot[archi$order == 2])
-      
-      architect <- architect(inputrsml = archi, fitter = T)
-      
-      # genotypes <- unlist(
+      withProgress(message = "Loading RSMLs", {
+        path <- input$folder_path
+        # path <- "/Users/g.lobet/Desktop/test2"
+        # path <- "/Users/g.lobet/Desktop/RSML_RootNav_Nov_3153_v3/Alex_tch2_screen"
         
-      dats <- strsplit(as.character(architect$FileName), "_")
-      factors <- NULL#data.frame(id=c(i:nrow(architect)))
+        archi <- rsmlToTable(path, fitter=T)
+        
+        # Correct the "plant" values, in case there is more than one plant per image
+        archi$plant[archi$order == 1] <- paste0(archi$plant[archi$order == 1], "_", archi$root[archi$order == 1])
+        archi$plant[archi$order == 2] <- paste0(archi$plant[archi$order == 2], "_", archi$parentroot[archi$order == 2])
+        
+        architect <- architect(inputrsml = archi, fitter = T)
+        
+        rs$architect_origin <- architect
+        rs$archi_origin <- archi
+      })
+    })
+    
+    ## Process names ---- 
+    observe({
+      if(is.null(rs$architect_origin)){return()}
+      
+      architect <- rs$architect_origin
+      archi <- rs$archi_origin
+      # Extract potential factors from the names of the the files
+      dats <- strsplit(as.character(architect$FileName), input$separator)
+      factors <- NULL
       for(i in c(1:(length(dats[[1]])-1))){
-        temp <- unlist(lapply(dats, `[[`, i))[]
-        factors <- cbind(factors, unlist(lapply(dats, `[[`, i))[]) 
-      #  colnames(factors)[colnames(factors) == "temp"] <- paste0("col-",i)
+        if(i > 0){
+          temp <- unlist(lapply(dats, `[[`, i))[]
+          factors <- cbind(factors, unlist(lapply(dats, `[[`, i))[]) 
+        }
       }
       rs$factors <- as.data.frame(factors)
       
-      dats <- strsplit(as.character(archi$file), "_")
-      factors <- NULL#data.frame(id=c(i:nrow(architect)))
-      for(i in c(1:length(dats[[1]]))){
-        temp <- unlist(lapply(dats, `[[`, i))[]
-        factors <- cbind(factors, unlist(lapply(dats, `[[`, i))[]) 
-        #  colnames(factors)[colnames(factors) == "temp"] <- paste0("col-",i)
+      dats <- strsplit(as.character(archi$file), input$separator)
+      factors <- NULL
+      for(i in c(1:(length(dats[[1]])-1))){
+        if(i > 0){
+          temp <- unlist(lapply(dats, `[[`, i))[]
+          factors <- cbind(factors, unlist(lapply(dats, `[[`, i))[]) 
+        }
       }
       rs$factors_2 <- as.data.frame(factors)
       
       rs$architect_origin <- architect
       rs$archi_origin <- archi
-      #rs$cols1 <- colnames(archi)[-1]
-      #rs$cols2 <- colnames(architect)[-1]
-      
-      
     })
     
     
     ## Update the genotype -----
+    # Process the factors extracted from the names and use them to assigne genotype, treatment, ...
     observeEvent(input$update_data, {
       
       archi <- rs$archi_origin
@@ -111,77 +121,6 @@ shinyServer(
       rs$archi <- archi
       rs$genotypes <- unique(archi$genotype)
       
-      archi <- archi %>%
-        mutate(plant_id = paste0(file,"-",plant)) %>%
-        mutate(root_id = paste0(plant_id,"-",root))
-      
-      convexhull <- NULL
-      for(id in unique(archi$plant_id)){
-        if(input$align){
-          archi[archi$plant_id == id,] %<>%
-            mutate(x11 = x1) %>%
-            mutate(x21 = x2) %>%
-            mutate(y11 = y1) %>%
-            mutate(y21 = y2) %>%
-            mutate(x1 = x1 - min(x11, x21)) %>%
-            mutate(y1 = y1 - min(y11, y21)) %>%
-            mutate(x2 = x2 - min(x11, x21)) %>%
-            mutate(y2 = y2 - min(y11, y21))%>%
-            select(-c(x11, x21, y11, y21))
-        }
-        temp <- archi %>% filter(plant_id == id)
-        
-        # temp <- temp %>% 
-        #   mutate(x1 = x1-(min(x1) + (max(x1)-min(x1))/2)) %>%
-        #   mutate(y1 = y1-(min(y1) + (max(y1)-min(y1))/2))
-        hpts <- chull(temp$x1, temp$y1)
-        hpts <- c(hpts, hpts[1])
-        temp <- temp[hpts,]
-        temp2 <- temp[,c("x1","y1")] %>%
-          mutate(x_end = x1) %>%
-          mutate(y_end = y1) %>%
-          select(x_end, y_end)
-        temp2 <- rbind(temp2[-1,], temp2[1,])
-        temp <- cbind(temp,temp2) %>%
-          select(x1,y1,x_end,y_end) %>%
-          mutate(plant_id = id)
-        convexhull <- rbind(convexhull, temp)
-      }
-      
-      
-      roots <- NULL
-      for(r in unique(archi$root_id)){
-        temp <- archi %>% 
-          filter(root_id == r) %>%
-          filter(grepl("true", bran) | grepl("true", apic))
-        vector_length <- sqrt(((temp$x1[2] - temp$x1[1]) + (temp$y1[2] - temp$y1[1]))^2)
-        vector_angle <- atan2(temp$x1[2] - temp$x1[1], temp$y1[2] - temp$y1[1]) * 180 / pi 
-        temp <- temp[2,]
-        roots <- rbind(roots, data.frame(file = temp$file,
-                                         genotype = temp$genotype,
-                                         treatment1 = temp$treatment1,
-                                         treatment2 = temp$treatment2,
-                                         rep = temp$rep,
-                                         date = temp$date,
-                                         order = temp$order,
-                                         plant = temp$plant,
-                                         plant_id = temp$plant_id,
-                                         root_id = temp$root_id,
-                                         parentroot = temp$parentroot,
-                                         length = temp$blength,
-                                         vector_length = vector_length,
-                                         orientation = vector_angle
-                                         ))
-      }
-      roots$vector_angle[roots$vector_angle < 0] <- 360 + roots$vector_angle[roots$vector_angle < 0]
-      
-      rs$roots <- roots
-      
-      rs$archi <- archi
-      
-      rs$convexhull <- merge(convexhull, archi[,c("plant_id", "genotype","treatment1","treatment2","rep","date")], by="plant_id")
-      
-      rs$roots1 <- ddply(archi, .(file, genotype, treatment1, treatment2, date, rep, plant, root), summarise, n=length(file))
           
     })    
     
@@ -192,6 +131,85 @@ shinyServer(
       
       archi <- rs$archi
       architect <- rs$architect
+      
+      withProgress(message = "Process data", {
+        
+        archi <- archi %>%
+          mutate(plant_id = paste0(file,"-",plant)) %>%
+          mutate(root_id = paste0(plant_id,"-",root))
+        
+        convexhull <- NULL
+        for(id in unique(archi$plant_id)){
+          # if(input$align){
+            archi[archi$plant_id == id,] %<>%
+              mutate(x11 = x1) %>%
+              mutate(x21 = x2) %>%
+              mutate(y11 = y1) %>%
+              mutate(y21 = y2) %>%
+              mutate(x1 = x1 - min(x11, x21)) %>%
+              mutate(y1 = y1 - min(y11, y21)) %>%
+              mutate(x2 = x2 - min(x11, x21)) %>%
+              mutate(y2 = y2 - min(y11, y21))%>%
+              select(-c(x11, x21, y11, y21))
+          # }
+          temp <- archi %>% filter(plant_id == id)
+          
+          hpts <- chull(temp$x2, temp$y2)
+          hpts <- c(hpts, hpts[1])
+          temp <- temp[hpts,]
+          temp2 <- temp[,c("x2","y2")] %>%
+            mutate(x_end = x2) %>%
+            mutate(y_end = y2) %>%
+            select(x_end, y_end)
+          temp2 <- rbind(temp2[-1,], temp2[1,])
+          temp <- cbind(temp,temp2) %>%
+            select(x1,y1,x_end,y_end) %>%
+            mutate(plant_id = id) %>%
+            mutate(genotype = archi[archi$plant_id == id,"genotype"][1]) %>%
+            mutate(treatment1 = archi[archi$plant_id == id,"treatment1"][1]) %>%
+            mutate(treatment2 = archi[archi$plant_id == id,"treatment2"][1]) %>%
+            mutate(rep = archi[archi$plant_id == id,"rep"][1]) %>%
+            mutate(date = archi[archi$plant_id == id,"date"][1])
+          
+          convexhull <- rbind(convexhull, temp)
+        }
+        rs$convexhull <- convexhull#merge(convexhull, archi[,c("plant_id", "genotype","treatment1","treatment2","rep","date")], by="plant_id")
+        
+        
+        # Compute data at the single root level
+        roots <- NULL
+        for(r in unique(archi$root_id)){
+          temp <- archi %>% 
+            filter(root_id == r) %>%
+            filter(grepl("true", bran) | grepl("true", apic))
+          vector_length <- sqrt(((temp$x1[2] - temp$x1[1]) + (temp$y1[2] - temp$y1[1]))^2)
+          vector_angle <- atan2(temp$x1[2] - temp$x1[1], temp$y1[2] - temp$y1[1]) * 180 / pi 
+          temp <- temp[2,]
+          roots <- rbind(roots, data.frame(file = temp$file,
+                                           genotype = temp$genotype,
+                                           treatment1 = temp$treatment1,
+                                           treatment2 = temp$treatment2,
+                                           rep = temp$rep,
+                                           date = temp$date,
+                                           order = temp$order,
+                                           plant = temp$plant,
+                                           plant_id = temp$plant_id,
+                                           root_id = temp$root_id,
+                                           parentroot = temp$parentroot,
+                                           length = temp$blength,
+                                           vector_length = vector_length,
+                                           orientation = vector_angle
+          ))
+        }
+        roots$vector_angle[roots$vector_angle < 0] <- 360 + roots$vector_angle[roots$vector_angle < 0]
+        
+        rs$roots <- roots
+        
+        rs$archi <- archi
+        
+        
+        rs$roots1 <- ddply(archi, .(file, genotype, treatment1, treatment2, date, rep, plant, root), summarise, n=length(file))        
+      })
       
       
       withProgress(message = 'Computing the histograms', {
@@ -644,6 +662,7 @@ ggplot(data = architect) +
     temp$value <- temp[[input$to_plot_2]]
     
     
+    
     if(!input$plot_mean_archi){
       pl <- ggplot(temp) + 
           geom_segment(aes(x = x1, y = -y1, xend = x2, yend = -y2, colour=value), size=input$linesize) + 
@@ -653,6 +672,10 @@ ggplot(data = architect) +
                                limits = input$psirange) + 
           facet_wrap(~plant_id, ncol=input$ncol)  +
         theme(legend.position="bottom")
+      
+      if(input$show_chul){
+        pl <- pl + geom_segment(data=convexhull, aes(x = x1, y = -y1, xend = x_end, yend = -y_end), colour="red", alpha = 0.8)
+      }
          
     }else{
       pl <- ggplot(temp) + 
@@ -664,6 +687,10 @@ ggplot(data = architect) +
         #scale_colour_gradientn(colours = terrain.colors(10)) + 
         facet_grid(treatment1~genotype) +
         theme(legend.position="top")
+      
+      if(input$show_chul){
+        pl <- pl + geom_segment(data=convexhull, aes(x = x1, y = -y1, xend = x_end, yend = -y_end), colour="red", alpha = 0.8)
+      }
     }
     
     pl
@@ -1094,6 +1121,85 @@ pl <- grid.arrange(pl1, pl2, ncol=1)'
     }
     DT::datatable(temp, options = list(scrollX = TRUE, pageLength = 5))
   })  
+  
+  
+  ## architect table ################################
+  
+  output$architect_results <- DT::renderDataTable({
+    if(is.null(rs$architect)){return()}
+    temp <- rs$architect
+    
+    DT::datatable(temp, options = list(scrollX = TRUE, pageLength = 10))
+  })  
+  output$download_architect <- downloadHandler(
+    filename = function() {"architect_results.csv"},
+    content = function(file) {
+      write.csv(rs$architect, file)
+    }
+  ) 
+  
+  ## architect table ################################
+  
+  output$roots_results <- DT::renderDataTable({
+    if(is.null(rs$roots)){return()}
+    temp <- rs$roots
+    
+    DT::datatable(temp, options = list(scrollX = TRUE, pageLength = 10))
+  })  
+  output$download_roots <- downloadHandler(
+    filename = function() {"roots_results.csv"},
+    content = function(file) {
+      write.csv(rs$roots, file)
+    }
+  ) 
+  
+  ## archi table ################################
+  
+  output$archi_results <- DT::renderDataTable({
+    if(is.null(rs$archi)){return()}
+    temp <- rs$archi
+    
+    DT::datatable(temp, options = list(scrollX = TRUE, pageLength = 10))
+  }) 
+  output$download_archi <- downloadHandler(
+    filename = function() {"segment_results.csv"},
+    content = function(file) {
+      write.csv(rs$archi, file)
+    }
+  ) 
+  
+  ## homology table ################################
+  
+  output$perh_results <- DT::renderDataTable({
+    if(is.null(rs$perhomology)){return()}
+    temp <- rs$perhomology
+    
+    DT::datatable(temp, options = list(scrollX = TRUE, pageLength = 10))
+  })    
+  output$download_perh <- downloadHandler(
+    filename = function() {"perhomology_results.csv"},
+    content = function(file) {
+      write.csv(rs$perhomology, file)
+    }
+  )
+  
+  ## convexhull table ################################
+  
+  output$chull_results <- DT::renderDataTable({
+    if(is.null(rs$convexhull)){return()}
+    temp <- rs$convexhull
+    
+    DT::datatable(temp, options = list(scrollX = TRUE, pageLength = 10))
+  })    
+  output$download_chull <- downloadHandler(
+    filename = function() {"convexhull_results.csv"},
+    content = function(file) {
+      write.csv(rs$convexhull, file)
+    }
+  )  
+  
+  
+  
   
   
 })
