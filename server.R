@@ -25,11 +25,20 @@ shinyServer(
     ## Load the data -------
     observeEvent(input$folder_path_button, {
       withProgress(message = "Loading RSMLs", {
-        path <- input$folder_path
         # path <- "/Users/g.lobet/Desktop/test2"
-        # path <- "/Users/g.lobet/Desktop/RSML_RootNav_Nov_3153_v3/Alex_tch2_screen"
+        # path <- "/Users/g.lobet/Desktop/APEX_RSML/"
+        # archi1 <- rsmlToTable(path, fitter=T)
         
-        archi <- rsmlToTable(path, fitter=T)
+        
+        if(input$architable){
+          path <- input$archi_path
+          archi <- read_csv(path$datapath)
+          # archi <- read.csv("~/Desktop/segment_results.csv")
+          class(archi) <- c("data.frame", "rsmlToTable")
+        }else{
+          path <- input$folder_path
+          archi <- rsmlToTable(path, fitter=T)
+        }
         
         # Correct the "plant" values, in case there is more than one plant per image
         archi$plant[archi$order == 1] <- paste0(archi$plant[archi$order == 1], "_", archi$root[archi$order == 1])
@@ -39,6 +48,8 @@ shinyServer(
         
         rs$architect_origin <- architect
         rs$archi_origin <- archi
+        rs$architect <- architect
+        rs$archi <- archi
       })
     })
     
@@ -120,6 +131,9 @@ shinyServer(
       rs$architect <- architect
       rs$archi <- archi
       rs$genotypes <- unique(archi$genotype)
+      
+      rs$treatments <- list(treatment1 = unique(archi$treatment1),
+                            treatment2 = unique(archi$treatment2))
       
           
     })    
@@ -448,6 +462,72 @@ architect$genotype <- genotypes
   }) 
   
   observe({
+    if(is.null(rs$treatments)){return()}
+    vars <- rs$treatments$treatment1
+    ct_options <- list()
+    sel <- input$treatments_to_plot
+    if(length(sel) == 0) sel = vars
+    for(ct in vars) ct_options[[ct]] <- ct
+    # cts  <- c("tot_root_length","n_laterals","tot_lat_length")
+    updateSelectInput(session, "treatments_to_plot", choices = ct_options, selected=sel) 
+  }) 
+  
+  observe({
+    if(is.null(rs$treatments)){return()}
+    vars <- rs$treatments$treatment2
+    ct_options <- list()
+    sel <- input$treatments_to_plot_2
+    if(length(sel) == 0) sel = vars
+    for(ct in vars) ct_options[[ct]] <- ct
+    # cts  <- c("tot_root_length","n_laterals","tot_lat_length")
+    updateSelectInput(session, "treatments_to_plot_2", choices = ct_options, selected=sel) 
+  }) 
+  
+  observe({
+    if(is.null(rs$treatments)){return()}
+    vars <- rs$treatments$treatment1
+    ct_options <- list()
+    sel <- input$treatments_to_plot_3
+    if(length(sel) == 0) sel = vars
+    for(ct in vars) ct_options[[ct]] <- ct
+    # cts  <- c("tot_root_length","n_laterals","tot_lat_length")
+    updateSelectInput(session, "treatments_to_plot_3", choices = ct_options, selected=sel) 
+  }) 
+  
+  observe({
+    if(is.null(rs$treatments)){return()}
+    vars <- rs$treatments$treatment2
+    ct_options <- list()
+    sel <- input$treatments_to_plot_4
+    if(length(sel) == 0) sel = vars
+    for(ct in vars) ct_options[[ct]] <- ct
+    # cts  <- c("tot_root_length","n_laterals","tot_lat_length")
+    updateSelectInput(session, "treatments_to_plot_4", choices = ct_options, selected=sel) 
+  }) 
+  
+  observe({
+    if(is.null(rs$treatments)){return()}
+    vars <- rs$treatments$treatment1
+    ct_options <- list()
+    sel <- input$treatments_to_plot_5
+    if(length(sel) == 0) sel = vars
+    for(ct in vars) ct_options[[ct]] <- ct
+    # cts  <- c("tot_root_length","n_laterals","tot_lat_length")
+    updateSelectInput(session, "treatments_to_plot_5", choices = ct_options, selected=sel) 
+  }) 
+  
+  observe({
+    if(is.null(rs$treatments)){return()}
+    vars <- rs$treatments$treatment2
+    ct_options <- list()
+    sel <- input$treatments_to_plot_6
+    if(length(sel) == 0) sel = vars
+    for(ct in vars) ct_options[[ct]] <- ct
+    # cts  <- c("tot_root_length","n_laterals","tot_lat_length")
+    updateSelectInput(session, "treatments_to_plot_6", choices = ct_options, selected=sel) 
+  }) 
+  
+  observe({
     if(is.null(rs$genotypes)){return()}
     vars <- unique(rs$genotypes)
     ct_options <- list()
@@ -525,30 +605,29 @@ architect$genotype <- genotypes
     if(is.null(rs$archi)){return()}
     
     if(input$root_level){
-      temp <- rs$roots[rs$roots$genotype %in% input$genotypes_to_plot_6,]
-      temp <- temp[temp$order %in% input$orders_to_plot_6,]      
+      temp <- rs$roots 
     }else{
-      temp <- rs$archi[rs$archi$genotype %in% input$genotypes_to_plot_6,]
-      temp <- temp[temp$order %in% input$orders_to_plot_6,]
+      temp <- rs$archi
     }
+    temp <- temp %>%
+      filter(genotype %in% input$genotypes_to_plot_6) %>%
+      filter(treatment1 %in% input$treatments_to_plot_5) %>%
+      filter(treatment2 %in% input$treatments_to_plot_6) %>%
+      filter(order %in% input$orders_to_plot_6)
     
-    if(input$plot_orders){
-      pl <- ggplot(temp, aes(orientation, fill=factor(genotype))) + 
+    
+    print(str(temp))
+    temp$xfacet <- temp[[input$archiangle_color]]
+    temp$yfacet <- temp[[input$archiangle_facet]]
+    temp$col <- as.factor(temp[[input$archiangle_color1]])
+    
+      pl <- ggplot(temp, aes(orientation, fill=col)) + 
         # geom_vline(aes(xintercept = median), colour="green") + 
         # geom_vline(aes(xintercept = mean), colour="blue") + 
         coord_polar(start = pi, direction=1) + 
         scale_x_continuous(breaks=seq(0, 360, by=30), expand=c(0,0), lim=c(0, 360)) +
-        facet_wrap(~order, ncol=input$ncol2) + 
+        facet_grid(yfacet~xfacet) + 
         theme_bw()
-    }else{
-      pl <- ggplot(temp, aes(orientation, fill=factor(order))) + 
-        # geom_vline(aes(xintercept = median), colour="green") + 
-        # geom_vline(aes(xintercept = mean), colour="blue") + 
-        coord_polar(start = pi, direction=1) + 
-        scale_x_continuous(breaks=seq(0, 360, by=30), expand=c(0,0), lim=c(0, 360)) +
-        facet_wrap(~genotype, ncol=input$ncol2) + 
-        theme_bw()
-    }
     
     if(input$plot_angle_abs) pl <- pl + geom_histogram(alpha=0.5)
     else pl <- pl + stat_density(alpha=0.5) 
@@ -561,11 +640,15 @@ architect$genotype <- genotypes
   output$time_plot <- renderPlot({
     if(is.null(rs$architect)){return()}
     val <- rs$names$name[rs$names$value == input$to_plot]
-    temp <- rs$architect[rs$architect$genotype %in% input$genotypes_to_plot,]
+    temp <- rs$architect %>%
+      filter(genotype %in% input$genotypes_to_plot) %>%
+      filter(treatment1 %in% input$treatments_to_plot) %>%
+      filter(treatment2 %in% input$treatments_to_plot_2)
     temp$value <- temp[[val]]
+    temp$fac <- temp[[input$architect_facet]]
+    temp$col <- temp[[input$architect_color]]
     
-    print(unique(temp$date))
-    
+
     pl <- ggplot() +  
       xlab("Time [days]") + 
       theme_classic() +
@@ -576,10 +659,12 @@ architect$genotype <- genotypes
     
     if(input$plot_mean){
       pl <- pl + 
-        stat_smooth(data = temp, aes(date, value, colour=genotype))
+        stat_smooth(data = temp, aes(date, value, colour=col)) + 
+        facet_wrap(~fac)
     } else{
       pl <- pl + 
-        geom_line(data = temp, aes(date, value, colour=genotype, group=FileName))
+        geom_line(data = temp, aes(date, value, colour=col, group=FileName)) + 
+        facet_wrap(~fac)
     }
     
     pl
@@ -591,19 +676,42 @@ architect$genotype <- genotypes
   output$metric_boxplot <- renderPlot({
     
     val <- rs$names$name[rs$names$value == input$to_plot]
-    temp <- rs$architect[rs$architect$genotype %in% input$genotypes_to_plot,]
+    temp <- rs$architect %>%
+      filter(genotype %in% input$genotypes_to_plot) %>%
+      filter(treatment1 %in% input$treatments_to_plot) %>%
+      filter(treatment2 %in% input$treatments_to_plot_2) %>%
+      filter(date == input$time_to_boxplot)
     temp$value <- temp[[val]]
-    temp <- filter(temp, Time == input$time_to_boxplot)
+    # temp <- filter(temp, date == input$time_to_boxplot)
     
-    pl <- ggplot(temp, aes(genotype, value, fill=genotype)) + 
+    
+    # input <- list(genotypes_to_plot = unique(architect$genotype),
+    #               treatments_to_plot = unique(architect$treatment1),
+    #               treatments_to_plot_1 = unique(architect$treatment2),
+    #               architect_color="genotype",
+    #               architect_facet="treatment1",
+    #               time_to_boxplot = "1")
+    # val <- "TRL"
+    # temp <- architect %>%
+    #   filter(genotype %in% input$genotypes_to_plot) %>%
+    #   filter(treatment1 %in% input$treatments_to_plot) %>%
+    #   filter(treatment2 %in% input$treatments_to_plot_1)
+    temp$value <- temp[[val]]
+    temp$fac <- temp[[input$architect_facet]]
+    temp$col <- temp[[input$architect_color]]
+    temp$fact <- temp[[input$architect_color]]
+    
+    
+    pl <- ggplot(temp, aes(fact, value, fill=col)) + 
       geom_boxplot() + 
       theme_classic() +
       theme(legend.position = "none",
             text=element_text(size=15),
             axis.text.x = element_text(angle = 45, hjust = 1))+
       ylab(paste0(input$to_plot, " [pixels]")) + 
-      xlab("Genotype") + 
-      ggtitle(paste0("Time = ",max(temp$Time)))
+      xlab(input$architect_color) + 
+      facet_grid(~fac) +
+      ggtitle(paste0("Time = ",max(temp$date)))
     
     pl
   })   
@@ -657,12 +765,18 @@ ggplot(data = architect) +
   output$archi_plot <- renderPlot({
     if(is.null(rs$archi)){return()}
     
-    temp <- rs$archi[rs$archi$genotype %in% input$genotypes_to_plot_1,]
+    temp <- rs$archi %>%
+      filter(genotype %in% input$genotypes_to_plot_1) %>%
+      filter(treatment1 %in% input$treatments_to_plot_3) %>%
+      filter(treatment2 %in% input$treatments_to_plot_4) %>%
+      filter(date == max(date))
     # temp <- temp[as.numeric(temp$rep) <= input$reps_to_plot,]
     temp$value <- temp[[input$to_plot_2]]
+    temp$xfacet <- temp[[input$archidraw_color]]
+    temp$yfacet <- temp[[input$archidraw_facet]]
     
-    
-    
+    message("ARCHI------")
+    print(str(temp))
     if(!input$plot_mean_archi){
       pl <- ggplot(temp) + 
           geom_segment(aes(x = x1, y = -y1, xend = x2, yend = -y2, colour=value), size=input$linesize) + 
@@ -685,7 +799,7 @@ ggplot(data = architect) +
         scale_colour_gradientn(colours=cscale3,
                                limits = input$psirange)+
         #scale_colour_gradientn(colours = terrain.colors(10)) + 
-        facet_grid(treatment1~genotype) +
+        facet_grid(xfacet~yfacet) +
         theme(legend.position="top")
       
       if(input$show_chul){
@@ -728,16 +842,25 @@ ggplot(archi) +
     
     temp <- rs$histogram[[input$to_plot_distri]] %>%
       filter(genotype %in% input$genotypes_to_plot_1) %>%
+      filter(treatment1 %in% input$treatments_to_plot_3) %>%
+      filter(treatment2 %in% input$treatments_to_plot_4) %>%
       filter(as.numeric(rep) <= input$reps_to_plot)
 
+
+    # temp <- temp[as.numeric(temp$rep) <= input$reps_to_plot,]
+    temp$value <- temp[[input$to_plot_2]]
+    temp$xfacet <- temp[[input$archidraw_color]]
+    temp$yfacet <- temp[[input$archidraw_facet]]
+    
+    
     if(input$plot_mean_archi){
-      pl <- ggplot(temp, aes(x=value, colour=genotype, group=file)) + 
+      pl <- ggplot(temp, aes(x=value, colour=xfacet, group=file)) + 
         geom_density() +
         theme_classic() + 
         theme(legend.position = "null") + 
-        facet_wrap(~genotype, ncol=input$ncol)      
+        facet_wrap(yfacet~xfacet)      
     }else{
-      pl <- ggplot(temp, aes(x=value, colour=genotype)) + 
+      pl <- ggplot(temp, aes(x=value, colour=xfacet)) + 
         geom_density() +
         theme_classic()
     }
@@ -784,18 +907,27 @@ pl <- ggplot(histogram, aes(x=value, colour=genotype)) +
     if(is.null(rs$perh_summary)){return()}
     
     temp <- rs$archi_summary %>%
-      filter(genotype %in% input$genotypes_to_plot_1)
+      filter(genotype %in% input$genotypes_to_plot_1)%>%
+      filter(treatment1 %in% input$treatments_to_plot_3) %>%
+      filter(treatment2 %in% input$treatments_to_plot_4)
     
     temp$value <- temp[[input$to_plot_2_bis]]
+    temp$xfacet <- temp[[input$archidraw_color]]
+    temp$yfacet <- temp[[input$archidraw_facet]]
     
-    pl <- ggplot(temp, aes(genotype, value, fill=genotype)) + 
+    print(str(temp))
+    
+    
+    
+    pl <- ggplot(temp, aes(xfacet, value, fill=xfacet)) + 
       geom_boxplot() + 
       theme_classic() +
+      facet_wrap(~yfacet)+
       theme(legend.position = "none",
             text=element_text(size=15),
             axis.text.x = element_text(angle = 45, hjust = 1))+
       ylab(paste0(input$to_plot_2_bis, " [pixels]")) + 
-      xlab("Genotype")
+      xlab(input$archidraw_color)
     
     
     pl
