@@ -26,7 +26,7 @@ shinyServer(
     observeEvent(input$folder_path_button, {
       withProgress(message = "Loading RSMLs", {
         # path <- "/Users/g.lobet/Desktop/test2"
-        # path <- "/Users/g.lobet/Desktop/APEX_RSML/"
+        path <- "/Users/g.lobet/Desktop/APEX_RSML_day_2-7//"
         # archi1 <- rsmlToTable(path, fitter=T)
         
         
@@ -37,14 +37,14 @@ shinyServer(
           class(archi) <- c("data.frame", "rsmlToTable")
         }else{
           path <- input$folder_path
-          archi <- rsmlToTable(path, fitter=T)
+          archi <- rsmlToTable(path, fitter=F)
         }
         
         # Correct the "plant" values, in case there is more than one plant per image
         archi$plant[archi$order == 1] <- paste0(archi$plant[archi$order == 1], "_", archi$root[archi$order == 1])
         archi$plant[archi$order == 2] <- paste0(archi$plant[archi$order == 2], "_", archi$parentroot[archi$order == 2])
         
-        architect <- architect(inputrsml = archi, fitter = T)
+        architect <- architect(inputrsml = archi, fitter = F)
         
         rs$architect_origin <- architect
         rs$archi_origin <- archi
@@ -72,7 +72,7 @@ shinyServer(
       
       dats <- strsplit(as.character(archi$file), input$separator)
       factors <- NULL
-      for(i in c(1:(length(dats[[1]])-1))){
+      for(i in c(1:(length(dats[[1]])))){
         if(i > 0){
           temp <- unlist(lapply(dats, `[[`, i))[]
           factors <- cbind(factors, unlist(lapply(dats, `[[`, i))[]) 
@@ -97,15 +97,17 @@ shinyServer(
       archi$genotype <- "-"
       archi$treatment1 <- "-"
       archi$treatment2 <- "-"
-      archi$date <- 1
+      archi$date <- "1"
       archi$rep <- 1
       
       architect$genotype <- "-"
       architect$treatment1 <- "-"
       architect$treatment2 <- "-"
-      architect$date <- 1
+      architect$date <- "1"
       architect$rep <- 1
       
+      print(factors_2)
+      print(input$timestamp)
       
       if(input$gens) archi$genotype <- factors_2[[input$genotypes]]
       if(input$tr1) archi$treatment1 <- factors_2[[input$treatment1]]
@@ -119,6 +121,8 @@ shinyServer(
       if(input$ti) architect$date <- factors[[input$timestamp]]
       if(input$rep) architect$rep <- as.numeric(gsub("[[:alpha:]]", "",factors[[input$repetition]]))
 
+      archi$date <- as.numeric(archi$date)
+      architect$date <- as.numeric(architect$date)
       
       # cols <- match(rs$cols2,colnames(architect))
       architect <-  architect %>%
@@ -253,13 +257,13 @@ shinyServer(
         hist1 <- ddply(archi, .(time, genotype, treatment1, treatment2, date, rep, file, root, rgeo), summarize, n=ceiling(sum(length/10)))
         geodesic <- expandRows(hist1, "n")
         
-        # Compute the magnitude data to make the histgram
-        hist1 <- ddply(archi, .(time, genotype, treatment1, treatment2, date, rep, file, root, magnitude), summarize, n=ceiling(sum(length/10)))
-        magnitude <- expandRows(hist1, "n")
-        
-        # Compute the pathlength data to make the histgram
-        hist1 <- ddply(archi, .(time, genotype, treatment1, treatment2, date, rep, file, root, pathlength), summarize, n=ceiling(sum(length/10)))
-        pathlength <- expandRows(hist1, "n")
+        # # Compute the magnitude data to make the histgram
+        # hist1 <- ddply(archi, .(time, genotype, treatment1, treatment2, date, rep, file, root, magnitude), summarize, n=ceiling(sum(length/10)))
+        # magnitude <- expandRows(hist1, "n")
+        # 
+        # # Compute the pathlength data to make the histgram
+        # hist1 <- ddply(archi, .(time, genotype, treatment1, treatment2, date, rep, file, root, pathlength), summarize, n=ceiling(sum(length/10)))
+        # pathlength <- expandRows(hist1, "n")
         
         # Compute the length data to make the histgram
         length <- ddply(archi, .(file, plant, root, genotype, treatment1, treatment2, date, rep), summarise, value=sum(length))
@@ -269,9 +273,7 @@ shinyServer(
                          "growth"=growth,
                          "length"=length,
                          "depth"=depth,
-                         "geodesic"=geodesic,
-                         "magnitude"=magnitude,
-                         "pathlength"=pathlength)
+                         "geodesic"=geodesic)
       })
       
       withProgress(message = 'Computing the persistance homology', {
@@ -311,11 +313,11 @@ shinyServer(
       archi_summary <- ddply(archi, .(file, genotype, treatment1, treatment2, date, rep), summarise,
                              n_root=length(x1),
                              depth = max(y1),
-                             tot_length = sum(length),
-                             max_magnitude = max(magnitude),
-                             max_path_length = max(pathlength),
-                             mean_magnitude = mean(magnitude),
-                             mean_path_length = mean(pathlength))
+                             tot_length = sum(length))
+                             # max_magnitude = max(magnitude),
+                             # max_path_length = max(pathlength),
+                             # mean_magnitude = mean(magnitude),
+                             # mean_path_length = mean(pathlength))
 
       })
       
@@ -361,8 +363,8 @@ architect$genotype <- genotypes
   # UI COMMANDS  ################################
 
     observe({
-      if(is.null(rs$factors)){return()}
-      vars <- colnames(rs$factors)
+      if(is.null(rs$factors_2)){return()}
+      vars <- colnames(rs$factors_2)
       ct_options <- list()
       sel <- input$genotypes
       for(ct in vars) ct_options[[ct]] <- ct
@@ -370,8 +372,8 @@ architect$genotype <- genotypes
       updateSelectInput(session, "genotypes", choices = ct_options, selected=sel) 
     })
     observe({
-      if(is.null(rs$factors)){return()}
-      vars <- colnames(rs$factors)
+      if(is.null(rs$factors_2)){return()}
+      vars <- colnames(rs$factors_2)
       ct_options <- list()
       sel <- input$treatment1
       for(ct in vars) ct_options[[ct]] <- ct
@@ -379,8 +381,8 @@ architect$genotype <- genotypes
       updateSelectInput(session, "treatment1", choices = ct_options, selected=sel) 
     })
     observe({
-      if(is.null(rs$factors)){return()}
-      vars <- colnames(rs$factors)
+      if(is.null(rs$factors_2)){return()}
+      vars <- colnames(rs$factors_2)
       ct_options <- list()
       sel <- input$treatment2
       for(ct in vars) ct_options[[ct]] <- ct
@@ -388,8 +390,8 @@ architect$genotype <- genotypes
       updateSelectInput(session, "treatment2", choices = ct_options, selected=sel) 
     })
     observe({
-      if(is.null(rs$factors)){return()}
-      vars <- colnames(rs$factors)
+      if(is.null(rs$factors_2)){return()}
+      vars <- colnames(rs$factors_2)
       ct_options <- list()
       sel <- input$timestamp
       for(ct in vars) ct_options[[ct]] <- ct
@@ -398,8 +400,8 @@ architect$genotype <- genotypes
     })
     
     observe({
-      if(is.null(rs$factors)){return()}
-      vars <- colnames(rs$factors)
+      if(is.null(rs$factors_2)){return()}
+      vars <- colnames(rs$factors_2)
       ct_options <- list()
       sel <- input$repetition
       for(ct in vars) ct_options[[ct]] <- ct
@@ -1237,8 +1239,8 @@ pl <- grid.arrange(pl1, pl2, ncol=1)'
   ## Factor table ################################
   
   output$factor_data <- DT::renderDataTable({
-    if(is.null(rs$factors)){return()}
-    temp <- rs$factors
+    if(is.null(rs$factors_2)){return()}
+    temp <- rs$factors_2
     
     DT::datatable(temp, options = list(scrollX = TRUE, pageLength = 5))
   })  
