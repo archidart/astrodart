@@ -26,7 +26,7 @@ shinyServer(
     observeEvent(input$folder_path_button, {
       withProgress(message = "Loading RSMLs", {
         # path <- "/Users/g.lobet/Desktop/test2"
-        path <- "/Users/g.lobet/Desktop/APEX_RSML_day_2-7//"
+        # path <- "/Users/g.lobet/Desktop/APEX_RSML_corners_fixed_2-7-18/"
         # archi1 <- rsmlToTable(path, fitter=T)
         
         
@@ -37,7 +37,7 @@ shinyServer(
           class(archi) <- c("data.frame", "rsmlToTable")
         }else{
           path <- input$folder_path
-          archi <- rsmlToTable(path, fitter=F)
+          archi <- rsmlToTable(path, fitter=F, show.progress = T)
         }
         
         # Correct the "plant" values, in case there is more than one plant per image
