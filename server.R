@@ -26,7 +26,7 @@ shinyServer(
     observeEvent(input$folder_path_button, {
       withProgress(message = "Loading RSMLs", {
         # path <- "/Users/g.lobet/Desktop/test2"
-        # path <- "/Users/g.lobet/Desktop/APEX_RSML_corners_fixed_2-7-18/"
+        # path <- "/Users/g.lobet/Desktop/APEX_RSML"
         # archi1 <- rsmlToTable(path, fitter=T)
         
         
@@ -43,6 +43,11 @@ shinyServer(
         # Correct the "plant" values, in case there is more than one plant per image
         archi$plant[archi$order == 1] <- paste0(archi$plant[archi$order == 1], "_", archi$root[archi$order == 1])
         archi$plant[archi$order == 2] <- paste0(archi$plant[archi$order == 2], "_", archi$parentroot[archi$order == 2])
+        for(i in c(1:nrow(archi))){
+          if(archi$order[i] == 3){
+            archi$plant[i] <- archi$plant[archi$root == archi$parentroot[i] & archi$image == archi$image[i]]
+          }
+        }
         
         architect <- architect(inputrsml = archi, fitter = F)
         

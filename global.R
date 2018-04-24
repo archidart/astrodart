@@ -34,11 +34,11 @@ PkgTest <- function(vec.pkg){
 }
 
 packages <- c("tidyverse", "DT", "shinyBS", "data.table", "gridExtra", 
-              "ggrepel", "vegan", "devtools", "splitstackshape", "plyr", "grDevices")
+              "ggrepel", "vegan", "devtools", "splitstackshape", "plyr", "grDevices", "archiDART")
 
 PkgTest(packages)
 
-devtools::install_github("archidart/archidart")
+#devtools::install_github("archidart/archidart")
 library(archiDART)
 
 
