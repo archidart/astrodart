@@ -67,7 +67,7 @@ shinyServer(
       # Extract potential factors from the names of the the files
       dats <- strsplit(as.character(architect$FileName), input$separator)
       factors <- NULL
-      for(i in c(1:(length(dats[[1]])-1))){
+      for(i in c(1:(length(dats[[1]])))){
         if(i > 0){
           temp <- unlist(lapply(dats, `[[`, i))[]
           factors <- cbind(factors, unlist(lapply(dats, `[[`, i))[]) 
