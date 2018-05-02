@@ -25,7 +25,7 @@ shinyServer(
     ## Load the data -------
     observeEvent(input$folder_path_button, {
       withProgress(message = "Loading RSMLs", {
-        # path <- "/Users/g.lobet/Desktop/test2"
+        # path <- "/Users/g.lobet/Desktop/smartroot"
         # path <- "/Users/g.lobet/Desktop/APEX_RSML"
         # archi1 <- rsmlToTable(path, fitter=T)
         
@@ -67,7 +67,7 @@ shinyServer(
       # Extract potential factors from the names of the the files
       dats <- strsplit(as.character(architect$FileName), input$separator)
       factors <- NULL
-      for(i in c(1:(length(dats[[1]])-1))){
+      for(i in c(1:(length(dats[[1]])))){
         if(i > 0){
           temp <- unlist(lapply(dats, `[[`, i))[]
           factors <- cbind(factors, unlist(lapply(dats, `[[`, i))[]) 
@@ -96,6 +96,8 @@ shinyServer(
       
       archi <- rs$archi_origin
       architect <- rs$architect_origin
+      
+
       factors <- rs$factors
       factors_2 <- rs$factors_2
       
@@ -111,8 +113,7 @@ shinyServer(
       architect$date <- "1"
       architect$rep <- 1
       
-      print(factors_2)
-      print(input$timestamp)
+      print(factors)
       
       if(input$gens) archi$genotype <- factors_2[[input$genotypes]]
       if(input$tr1) archi$treatment1 <- factors_2[[input$treatment1]]

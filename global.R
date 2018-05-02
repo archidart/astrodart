@@ -33,8 +33,9 @@ PkgTest <- function(vec.pkg){
   return(TRUE)
 }
 
-packages <- c("tidyverse", "DT", "shinyBS", "data.table", "gridExtra", 
-              "ggrepel", "vegan", "devtools", "splitstackshape", "plyr", "grDevices", "archiDART")
+packages <- c("tidyverse", "DT", "shinyBS", "gridExtra", 
+              "ggrepel", "vegan", "devtools", "splitstackshape", 
+              "plyr", "grDevices", "archiDART")
 
 PkgTest(packages)
 
