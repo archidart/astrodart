@@ -26,7 +26,7 @@ shinyServer(
     observeEvent(input$folder_path_button, {
       withProgress(message = "Loading RSMLs", {
         # path <- "/Users/g.lobet/Desktop/smartroot"
-        # path <- "/Users/g.lobet/Desktop/data1"
+        # path <- "/Users/g.lobet/Desktop/Data"
         # archi1 <- rsmlToTable(path, fitter=T)
         
         
@@ -37,7 +37,7 @@ shinyServer(
           class(archi) <- c("data.frame", "rsmlToTable")
         }else{
           path <- input$folder_path
-          archi <- rsmlToTable(path, fitter=F, show.progress = F)
+          archi <- rsmlToTable(path, fitter=F, show.progress = T)
         }
         
         # Correct the "plant" values, in case there is more than one plant per image
@@ -45,7 +45,8 @@ shinyServer(
         archi$plant[archi$order == 2] <- paste0(archi$plant[archi$order == 2], "_", archi$parentroot[archi$order == 2])
         for(i in c(1:nrow(archi))){
           if(archi$order[i] == 3){
-            archi$plant[i] <- archi$plant[archi$root == archi$parentroot[i] & archi$image == archi$image[i]]
+            print("Hello")
+            archi$plant[i] <- archi$plant[archi$root == archi$parentroot[i] & archi$file == archi$file[i]]
           }
         }
         
@@ -66,10 +67,17 @@ shinyServer(
       archi <- rs$archi_origin
       # Extract potential factors from the names of the the files
       dats <- strsplit(as.character(architect$FileName), input$separator)
+      dats <- strsplit(as.character(architect$FileName), "_")
       factors <- NULL
-      for(i in c(1:(length(dats[[1]])))){
+      
+      min <- 10000
+      for(i in c(1:(length(dats)))){
+        if(length(dats[[i]]) < min) min <- length(dats[[i]])
+      }
+      
+      for(i in c(1:min)){
         if(i > 0){
-          temp <- unlist(lapply(dats, `[[`, i))[]
+          temp <- unlist(lapply(dats, `[[`, 3))[]
           factors <- cbind(factors, unlist(lapply(dats, `[[`, i))[]) 
         }
       }
