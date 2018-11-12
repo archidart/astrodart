@@ -37,7 +37,7 @@ shinyServer(
           class(archi) <- c("data.frame", "rsmlToTable")
         }else{
           path <- input$folder_path
-          # path <- "~/Desktop/untitled folder//"
+          path <- "~/Desktop/test//"
           archi <- rsmlToTable(path, fitter=F, show.progress = T)
         }
         
@@ -52,11 +52,11 @@ shinyServer(
         }
         
         temp <- archi %>% 
-          dplyr::group_by(file, root) %>% 
+          dplyr::group_by(file, plant, root) %>% 
           dplyr::mutate(rank = dense_rank(desc(blength))) %>% 
-          arrange(file, root, rank) %>% 
+          arrange(file, plant, root, rank) %>% 
           filter(rank <=5) %>% 
-          dplyr::group_by(file, order) %>% 
+          dplyr::group_by(file, plant,  order) %>% 
           dplyr::summarise(angle = mean(orientation)) %>% 
           mutate(order = paste0("An",order)) %>% 
           spread(key = order, value = angle) %>% 
