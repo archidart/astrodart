@@ -29,6 +29,7 @@ shinyServer(
         # path <- "/Users/g.lobet/Desktop/Total_Data_Ecotype/"
         # archi1 <- rsmlToTable(path, fitter=T)
         
+        print("Step 0")
         
         if(input$architable){
           path <- input$archi_path
