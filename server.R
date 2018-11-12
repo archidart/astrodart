@@ -24,9 +24,9 @@ shinyServer(
     
     ## Load the data -------
     observeEvent(input$folder_path_button, {
-      withProgress(message = "Loading RSMLs", {
+      withProgress(message = "Loading RSMLs", min = 0, max = 1, {
         # path <- "/Users/g.lobet/Desktop/smartroot"
-        # path <- "/Users/g.lobet/Desktop/Data"
+        # path <- "/Users/g.lobet/Desktop/Total_Data_Ecotype/"
         # archi1 <- rsmlToTable(path, fitter=T)
         
         
@@ -37,6 +37,7 @@ shinyServer(
           class(archi) <- c("data.frame", "rsmlToTable")
         }else{
           path <- input$folder_path
+          # path <- "~/Desktop/untitled folder//"
           archi <- rsmlToTable(path, fitter=F, show.progress = T)
         }
         
@@ -50,7 +51,25 @@ shinyServer(
           }
         }
         
-        architect <- architect(inputrsml = archi, fitter = F)
+        temp <- archi %>% 
+          dplyr::group_by(file, root) %>% 
+          dplyr::mutate(rank = dense_rank(desc(blength))) %>% 
+          arrange(file, root, rank) %>% 
+          filter(rank <=5) %>% 
+          dplyr::group_by(file, order) %>% 
+          dplyr::summarise(angle = mean(orientation)) %>% 
+          mutate(order = paste0("An",order)) %>% 
+          spread(key = order, value = angle) %>% 
+          mutate(file = paste0(file, "_1"))
+        
+        architect <- architect(inputrsml = archi, fitter = F) %>% 
+          arrange(FileName)
+
+        #architect <- merge(architect, temp, by.x = "FileName",  by.y= "file")
+        architect <- cbind(architect, temp[,-1])
+        
+        
+        
         
         rs$architect_origin <- architect
         rs$archi_origin <- archi
@@ -67,9 +86,11 @@ shinyServer(
       archi <- rs$archi_origin
       # Extract potential factors from the names of the the files
       dats <- strsplit(as.character(architect$FileName), input$separator)
-      dats <- strsplit(as.character(architect$FileName), "_")
+      # dats <- strsplit(as.character(architect$FileName), "_")
       factors <- NULL
       
+      print(dats)
+
       min <- 10000
       for(i in c(1:(length(dats)))){
         if(length(dats[[i]]) < min) min <- length(dats[[i]])
@@ -120,8 +141,6 @@ shinyServer(
       architect$treatment2 <- "-"
       architect$date <- "1"
       architect$rep <- 1
-      
-      print(factors)
       
       if(input$gens) archi$genotype <- factors_2[[input$genotypes]]
       if(input$tr1) archi$treatment1 <- factors_2[[input$treatment1]]

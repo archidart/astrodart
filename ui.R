@@ -47,7 +47,7 @@ shinyUI(fluidPage(theme = "bootstrap.css",
                        ),
                        conditionalPanel(
                          condition = "input.architable != true",
-                         textInput("folder_path", label="Path to the folder containing the RSML files", value="/Users/g.lobet/Desktop/APEX_RSML")
+                         textInput("folder_path", label="Path to the folder containing the RSML files", value="/Users/g.lobet/Desktop/test")
                        ),
                        actionButton('folder_path_button', label="Download RSML data", icon = icon("upload")),
                        tags$hr(),
