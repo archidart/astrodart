@@ -41,6 +41,7 @@ shinyServer(
           archi <- rsmlToTable(path, fitter=F, show.progress = T)
         }
         
+        print("Step 1")
         # Correct the "plant" values, in case there is more than one plant per image
         archi$plant[archi$order == 1] <- paste0(archi$plant[archi$order == 1], "_", archi$root[archi$order == 1])
         archi$plant[archi$order == 2] <- paste0(archi$plant[archi$order == 2], "_", archi$parentroot[archi$order == 2])
@@ -50,6 +51,7 @@ shinyServer(
             archi$plant[i] <- archi$plant[archi$root == archi$parentroot[i] & archi$file == archi$file[i]]
           }
         }
+        print("Step 2")
         
         temp <- archi %>% 
           dplyr::group_by(file, plant, root) %>% 
@@ -62,14 +64,16 @@ shinyServer(
           spread(key = order, value = angle) %>% 
           mutate(file = paste0(file, "_1"))
         
+        print("Step 3")
         architect <- architect(inputrsml = archi, fitter = F) %>% 
           arrange(FileName)
 
+        print("Step 4")
         #architect <- merge(architect, temp, by.x = "FileName",  by.y= "file")
         architect <- cbind(architect, temp[,-1])
         
         
-        
+        print("Step 5")
         
         rs$architect_origin <- architect
         rs$archi_origin <- archi
