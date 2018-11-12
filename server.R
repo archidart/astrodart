@@ -37,7 +37,7 @@ shinyServer(
           class(archi) <- c("data.frame", "rsmlToTable")
         }else{
           path <- input$folder_path
-          path <- "~/Desktop/test//"
+          # path <- "~/Desktop/test//"
           archi <- rsmlToTable(path, fitter=F, show.progress = T)
         }
         
