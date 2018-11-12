@@ -93,8 +93,6 @@ shinyServer(
       # dats <- strsplit(as.character(architect$FileName), "_")
       factors <- NULL
       
-      print(dats)
-
       min <- 10000
       for(i in c(1:(length(dats)))){
         if(length(dats[[i]]) < min) min <- length(dats[[i]])
