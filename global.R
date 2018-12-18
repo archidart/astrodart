@@ -39,7 +39,7 @@ packages <- c("tidyverse", "DT", "shinyBS", "gridExtra",
 
 PkgTest(packages)
 
-devtools::install_github("archidart/archidart", force=T)
+#devtools::install_github("archidart/archidart", force=T)
 library(archiDART)
 
 
