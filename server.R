@@ -43,16 +43,14 @@ shinyServer(
         }
         
         print("Step 1")
-        # Correct the "plant" values, in case there is more than one plant per image
+        # Correct the "pl27ant" values, in case there is more than one plant per image
         archi$plant[archi$order == 1] <- paste0(archi$plant[archi$order == 1], "_", archi$root[archi$order == 1])
         archi$plant[archi$order == 2] <- paste0(archi$plant[archi$order == 2], "_", archi$parentroot[archi$order == 2])
         for(i in c(1:nrow(archi))){
           if(archi$order[i] == 3){
-            print("Hello")
             archi$plant[i] <- archi$plant[archi$root == archi$parentroot[i] & archi$file == archi$file[i]]
           }
         }
-        print("Step 2")
         
         temp <- archi %>% 
           dplyr::group_by(file, plant, root) %>% 
@@ -65,14 +63,13 @@ shinyServer(
           spread(key = order, value = angle) %>% 
           mutate(file = paste0(file, "_1"))
         
-        print("Step 3")
         architect <- architect(inputrsml = archi, fitter = F) %>% 
           arrange(FileName)
 
         print("Step 4")
         #architect <- merge(architect, temp, by.x = "FileName",  by.y= "file")
-        architect <- cbind(architect, temp[,-1])
-        
+        architect$plant <- temp$plant
+        architect$An1 <- temp$An1
         
         print("Step 5")
         
@@ -108,14 +105,15 @@ shinyServer(
       rs$factors <- as.data.frame(factors)
       
       dats <- strsplit(as.character(archi$file), input$separator)
-      factors <- NULL
+      # dats <- strsplit(as.character(archi$file), "_")
+      factors_2 <- NULL
       for(i in c(1:(length(dats[[1]])))){
         if(i > 0){
           temp <- unlist(lapply(dats, `[[`, i))[]
-          factors <- cbind(factors, unlist(lapply(dats, `[[`, i))[]) 
+          factors_2 <- cbind(factors_2, unlist(lapply(dats, `[[`, i))[]) 
         }
       }
-      rs$factors_2 <- as.data.frame(factors)
+      rs$factors_2 <- as.data.frame(factors_2)
       
       rs$architect_origin <- architect
       rs$archi_origin <- archi
@@ -148,13 +146,13 @@ shinyServer(
       if(input$gens) archi$genotype <- factors_2[[input$genotypes]]
       if(input$tr1) archi$treatment1 <- factors_2[[input$treatment1]]
       if(input$tr2) archi$treatment2 <- factors_2[[input$treatment2]]
-      if(input$ti) archi$date <- factors_2[[input$timestamp]]
+      if(input$ti) archi$date <- factors_2[[input$timestamp]] # archi$date <- factors_2[["V2"]]
       if(input$rep) archi$rep <- as.numeric(gsub("[[:alpha:]]", "",factors_2[[input$repetition]]))
       
       if(input$gens) architect$genotype <- factors[[input$genotypes]]
       if(input$tr1) architect$treatment1 <- factors[[input$treatment1]]
       if(input$tr2) architect$treatment2 <- factors[[input$treatment2]]
-      if(input$ti) architect$date <- factors[[input$timestamp]]
+      if(input$ti) architect$date <- factors[[input$timestamp]] # architect$date <- factors[["V2"]]
       if(input$rep) architect$rep <- as.numeric(gsub("[[:alpha:]]", "",factors[[input$repetition]]))
 
       archi$date <- as.numeric(archi$date)
@@ -166,14 +164,15 @@ shinyServer(
       
       # cols <- match(rs$cols,colnames(archi))
       archi <-  archi %>%
+        as.tibble() %>% 
         select(file, genotype, treatment1, treatment2, date, rep, everything())
-      
       rs$architect <- architect
       rs$archi <- archi
       rs$genotypes <- unique(archi$genotype)
       
       rs$treatments <- list(treatment1 = unique(archi$treatment1),
                             treatment2 = unique(archi$treatment2))
+      
       
           
     })    
@@ -206,28 +205,40 @@ shinyServer(
               mutate(y2 = y2 - min(y11, y21))%>%
               select(-c(x11, x21, y11, y21))
           # }
+          
+          
           temp <- archi %>% filter(plant_id == id)
+
+          gen <- temp$genotype[1]
+          tr1 <- temp$treatment1[1]
+          tr2 <- temp$treatment2[1]
+          rep <- temp$rep[1]
+          date <- temp$date[1]
           
           hpts <- chull(temp$x2, temp$y2)
           hpts <- c(hpts, hpts[1])
           temp <- temp[hpts,]
+          
+          
           temp2 <- temp[,c("x2","y2")] %>%
             mutate(x_end = x2) %>%
             mutate(y_end = y2) %>%
             select(x_end, y_end)
+          
           temp2 <- rbind(temp2[-1,], temp2[1,])
-          temp <- cbind(temp,temp2) %>%
+
+          temp3 <- cbind(temp,temp2) %>%
             select(x1,y1,x_end,y_end) %>%
             mutate(plant_id = id) %>%
-            mutate(genotype = archi[archi$plant_id == id,"genotype"][1]) %>%
-            mutate(treatment1 = archi[archi$plant_id == id,"treatment1"][1]) %>%
-            mutate(treatment2 = archi[archi$plant_id == id,"treatment2"][1]) %>%
-            mutate(rep = archi[archi$plant_id == id,"rep"][1]) %>%
-            mutate(date = archi[archi$plant_id == id,"date"][1])
-          
-          convexhull <- rbind(convexhull, temp)
+            mutate(genotype = gen) %>%
+            mutate(treatment1 = tr1) %>%
+            mutate(treatment2 = tr2) %>%
+            mutate(rep = rep) %>%
+            mutate(date = date)
+          convexhull <- rbind(convexhull, temp3)
         }
         rs$convexhull <- convexhull#merge(convexhull, archi[,c("plant_id", "genotype","treatment1","treatment2","rep","date")], by="plant_id")
+        
         
         
         # Compute data at the single root level
@@ -313,8 +324,8 @@ shinyServer(
       })
       
       withProgress(message = 'Computing the persistance homology', {
-        
-        perhomology <- perhomology(archi)
+        # archi2 <- archi
+        perhomology <- perhomology(rs$archi_origin)
         distance <- bottleneckdist(perhomology)
 
         print(str(distance))
